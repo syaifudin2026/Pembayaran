@@ -2267,7 +2267,7 @@
       if(!bayar) return Swal.fire('Error', 'Input jumlah bayar', 'error'); if(sumber === 'Uang Tabungan' && getSaldo(nis) < bayar) return Swal.fire('Error', 'Saldo tabungan tidak cukup', 'error');
       const sisa = tagihan - bayar; const payload = { nis, nama, jenisTx: 'SPP', detail: `Sem ${sem} - ${bln}`, tagihan, dibayar: bayar, sisa: sisa > 0 ? sisa : 0, sumberDana: sumber, petugas: currentUser };
       startTopLoading();
-      google.script.run.withSuccessHandler(res => { stopTopLoading(); Swal.fire('Sukses', 'Transaksi SPP Tersimpan', 'success'); handlePostTransaction(action, res.txId, res.date, nis, nama, `SPP ${sem} ${bln}`, bayar, sisa > 0 ? sisa : 0, wa); resetFilterSPP(); refreshData(true); }).withFailureHandler(err => { stopTopLoading(); Swal.fire('Error', String(err), 'error'); }).processTransaction(payload);
+      google.script.run.withSuccessHandler(res => { stopTopLoading(); Swal.fire('Sukses', 'Transaksi SPP Tersimpan', 'success'); handlePostTransaction(action, res.txId, res.date, nis, nama, `SPP ${sem} ${bln}`, bayar, sisa > 0 ? sisa : 0, wa); insertSupabaseData('Transaksi', { ID: res.txId, Tanggal: res.date, NIS: nis, Nama: nama, Jenis: 'SPP', Detail: `Sem ${sem} - ${bln}`, Tagihan: tagihan, Dibayar: bayar, Sisa: sisa > 0 ? sisa : 0, SumberDana: sumber, Petugas: currentUser }).catch(e => console.error('Supabase insert Transaksi gagal:', e)); resetFilterSPP(); refreshData(true); }).withFailureHandler(err => { stopTopLoading(); Swal.fire('Error', String(err), 'error'); }).processTransaction(payload);
     }
 
     function toggleKasColor() {
@@ -2300,6 +2300,7 @@
             .withSuccessHandler(res => {
                 stopTopLoading();
                 Swal.fire('Sukses', `Transaksi ${jenisKas} Kas Berhasil Disimpan`, 'success');
+                insertSupabaseData('Transaksi', { ID: res.txId, Tanggal: res.date, NIS: '-', Nama: '-', Jenis: jenisKas, Detail: ket, Tagihan: 0, Dibayar: nominal, Sisa: 0, SumberDana: sumber, Petugas: currentUser }).catch(e => console.error('Supabase insert Transaksi gagal:', e));
                 document.getElementById('kasNominal').value = '';
                 document.getElementById('kasKet').value = '';
                 refreshData(true);
@@ -2333,7 +2334,7 @@
       if(!bayar || !namaBiaya) return Swal.fire('Error', 'Lengkapi form', 'error'); if(sumber === 'Uang Tabungan' && getSaldo(nis) < bayar) return Swal.fire('Error', 'Saldo kurang', 'error');
       const sisa = tagihan - bayar; const payload = { nis, nama, jenisTx: 'Lainnya', detail: namaBiaya, tagihan, dibayar: bayar, sisa: sisa > 0 ? sisa : 0, sumberDana: sumber, petugas: currentUser };
       startTopLoading();
-      google.script.run.withSuccessHandler(res => { stopTopLoading(); Swal.fire('Sukses', 'Transaksi Berhasil', 'success'); handlePostTransaction(action, res.txId, res.date, nis, nama, namaBiaya, bayar, sisa > 0 ? sisa : 0, wa); resetFilterTxLain(); refreshData(true); }).withFailureHandler(err => { stopTopLoading(); Swal.fire('Error', String(err), 'error'); }).processTransaction(payload);
+      google.script.run.withSuccessHandler(res => { stopTopLoading(); Swal.fire('Sukses', 'Transaksi Berhasil', 'success'); handlePostTransaction(action, res.txId, res.date, nis, nama, namaBiaya, bayar, sisa > 0 ? sisa : 0, wa); insertSupabaseData('Transaksi', { ID: res.txId, Tanggal: res.date, NIS: nis, Nama: nama, Jenis: 'Lainnya', Detail: namaBiaya, Tagihan: tagihan, Dibayar: bayar, Sisa: sisa > 0 ? sisa : 0, SumberDana: sumber, Petugas: currentUser }).catch(e => console.error('Supabase insert Transaksi gagal:', e)); resetFilterTxLain(); refreshData(true); }).withFailureHandler(err => { stopTopLoading(); Swal.fire('Error', String(err), 'error'); }).processTransaction(payload);
     }
 
     document.getElementById('tabSearch').addEventListener('change', function() { const s = getSiswaFromSearch(this.value); if(s) { filterNisTabungan = s.NIS; document.getElementById('tabNama').innerText = s.Nama; document.getElementById('tabSaldo').innerText = getSaldo(s.NIS); document.getElementById('tabNIS').value = s.NIS; document.getElementById('tabStudentInfo').classList.remove('hidden-view'); document.getElementById('tabFormArea').classList.remove('hidden-view'); renderAllTables(); } else { resetFilterTabungan(); } });
@@ -2344,7 +2345,7 @@
       const nis = document.getElementById('tabNIS').value; const nama = document.getElementById('tabNama').innerText; const jenis = document.getElementById('tabJenis').value; const nominal = Number(document.getElementById('tabNominal').value); const ket = document.getElementById('tabKet').value;
       if(!nominal) return; if(jenis === 'Tarik' && getSaldo(nis) < nominal) return Swal.fire('Error', 'Saldo tidak cukup', 'error');
       startTopLoading();
-      google.script.run.withSuccessHandler(res => { stopTopLoading(); Swal.fire('Sukses', 'Mutasi Tabungan Berhasil', 'success'); document.getElementById('tabNominal').value = ''; document.getElementById('tabKet').value = ''; refreshData(true); setTimeout(() => { document.getElementById('tabSaldo').innerText = getSaldo(nis); }, 1500); }).withFailureHandler(err => { stopTopLoading(); Swal.fire('Error', String(err), 'error'); }).processTabungan({ nis, nama, jenisMutasi: jenis, nominal, keterangan: ket, petugas: currentUser });
+      google.script.run.withSuccessHandler(res => { stopTopLoading(); Swal.fire('Sukses', 'Mutasi Tabungan Berhasil', 'success'); insertSupabaseData('Tabungan', { ID: res.txId, Tanggal: res.date, NIS: nis, Nama: nama, JenisMutasi: jenis, Nominal: nominal, Keterangan: ket, Petugas: currentUser }).catch(e => console.error('Supabase insert Tabungan gagal:', e)); document.getElementById('tabNominal').value = ''; document.getElementById('tabKet').value = ''; refreshData(true); setTimeout(() => { document.getElementById('tabSaldo').innerText = getSaldo(nis); }, 1500); }).withFailureHandler(err => { stopTopLoading(); Swal.fire('Error', String(err), 'error'); }).processTabungan({ nis, nama, jenisMutasi: jenis, nominal, keterangan: ket, petugas: currentUser });
     }
 
     function setupPrintWrapper() { const ukuran = settingsMap['UkuranNota'] || 'A4'; const printSec = document.getElementById('print-section'); printSec.className = `bg-white text-black print-${ukuran.toLowerCase()}`; }
