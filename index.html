@@ -1408,25 +1408,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Load file API JS Anda -->
   <script src="api.js"></script>
-
-### 3. Cara Menggunakannya
-Setelah `api.js` dimuat, Anda bisa langsung memanggil fungsi `getSupabaseData()` dari manapun di `index.html`. Contohnya:
-
-```javascript
-// Di dalam script index.html Anda
-async function ambilData() {
-  const data = await getSupabaseData('Data'); // 'Data' adalah nama tabel Anda
-  console.log(data);
-}
-
-### Keuntungan cara ini:
-* **Bersih:** Jika suatu saat Anda ingin mengganti konfigurasi Supabase (URL atau API Key), Anda cukup mengubah satu file (`api.js`) saja, tidak perlu mengedit file `index.html`.
-* **Modular:** Kode di `index.html` Anda tidak akan penuh dengan kode *boilerplate* Supabase.
-* **Mudah Dipelihara:** Jika Anda memiliki banyak tabel (tadi Anda punya 8 tabel), Anda bisa menambah fungsi-fungsi khusus untuk setiap tabel di dalam `api.js`.
-
-**Peringatan:** Jika Anda menyimpan `api.js` di server yang sama dengan `index.html` (misal di GitHub Pages), pastikan path-nya benar (`<script src="./api.js"></script>`).
-
-Apakah Anda sudah siap untuk mengunggah file `api.js` ini ke *repository* GitHub Anda?
   <script>
     const CACHE_KEY = 'sppAppCache_v1';
     let appData = { Data: [], Kelas: [], BiayaLain: [], Tabungan: [], Transaksi: [], Admin: [], Pengaturan: [] };
