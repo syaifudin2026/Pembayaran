@@ -1,6 +1,6 @@
 // Konfigurasi Supabase
-const SUPABASE_URL = 'URL_PROYEK_ANDA';
-const SUPABASE_KEY = 'API_KEY_ANDA';
+const SUPABASE_URL = 'https://puvbbhhrmhhxevaitbpc.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_0xuKwAB1KfAM8b4mONQQXg_CbaubMeN';
 
 // Inisialisasi client
 const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
