@@ -800,14 +800,14 @@
               <div class="grid grid-cols-2 gap-4 mb-4">
                 <div>
                   <label class="block text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Pilih Semester</label>
-                  <select id="sppSemester" onchange="updateSppTagihan()" class="w-full border dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                  <select id="sppSemester" onchange="handleSppSemesterChange()" class="w-full border dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
                     <option value="">-- Pilih --</option>
                     <option value="Ganjil">Ganjil</option>
                     <option value="Genap">Genap</option>
                     <option value="Custom">Custom (Input Manual)</option>
                   </select>
                 </div>
-                <div>
+                <div id="sppBulanSingleWrap">
                   <label class="block text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Bulan</label>
                   <select id="sppBulan" onchange="updateSppTagihan()" class="w-full border dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
                     <option>Juli</option><option>Agustus</option><option>September</option><option>Oktober</option>
@@ -815,6 +815,15 @@
                     <option>Maret</option><option>April</option><option>Mei</option><option>Juni</option>
                   </select>
                 </div>
+              </div>
+
+              <div class="flex items-center gap-2 mb-4 -mt-2">
+                <input type="checkbox" id="sppMultiMode" onchange="toggleSppMultiMode()" class="w-4 h-4 text-blue-600 rounded">
+                <label for="sppMultiMode" class="text-sm font-semibold text-gray-700 dark:text-gray-300 cursor-pointer">Bayar Beberapa Bulan Sekaligus (Tanpa Input Satu-satu)</label>
+              </div>
+              <div id="sppMultiBulanWrap" class="hidden-view mb-4 border dark:border-slate-700 rounded-lg p-3 bg-gray-50 dark:bg-slate-900/50">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-2"><i class="fas fa-info-circle mr-1"></i>Centang bulan yang mau dibayar. Sistem otomatis mengalokasikan nominal ke bulan-bulan tersebut secara berurutan (bulan penuh lunas dulu, sisa jadi angsuran).</p>
+                <div id="sppMultiBulanList" class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm"></div>
               </div>
 
               <label class="block text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Sisa Tagihan (Setelah Beasiswa/Cicilan)</label>
@@ -902,10 +911,21 @@
             </div>
 
             <div id="txlFormArea" class="hidden-view bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
-              <label class="block text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Pilih Biaya Lain</label>
-              <select id="txlBiaya" class="w-full border dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white p-2.5 rounded-lg mb-4 focus:ring-2 focus:ring-indigo-500 outline-none">
-                <option value="">-- Pilih --</option>
-              </select>
+              <div id="txlBiayaSingleWrap">
+                <label class="block text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Pilih Biaya Lain</label>
+                <select id="txlBiaya" class="w-full border dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white p-2.5 rounded-lg mb-4 focus:ring-2 focus:ring-indigo-500 outline-none">
+                  <option value="">-- Pilih --</option>
+                </select>
+              </div>
+
+              <div class="flex items-center gap-2 mb-4 -mt-1">
+                <input type="checkbox" id="txlMultiMode" onchange="toggleTxlMultiMode()" class="w-4 h-4 text-indigo-600 rounded">
+                <label for="txlMultiMode" class="text-sm font-semibold text-gray-700 dark:text-gray-300 cursor-pointer">Bayar Beberapa Biaya Sekaligus (Alokasi Otomatis)</label>
+              </div>
+              <div id="txlMultiBiayaWrap" class="hidden-view mb-4 border dark:border-slate-700 rounded-lg p-3 bg-gray-50 dark:bg-slate-900/50">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-2"><i class="fas fa-info-circle mr-1"></i>Centang biaya yang mau dibayar (bisa 2, 10, atau lebih). Masukkan Total Dibayar di bawah — nominal genap otomatis dialokasikan berurutan, sisa jadi angsuran untuk biaya berikutnya.</p>
+                <div id="txlMultiBiayaList" class="space-y-1.5 text-sm max-h-56 overflow-y-auto"></div>
+              </div>
 
               <label class="block text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Sisa Tagihan (Setelah Cicilan)</label>
               <input type="number" id="txlTagihan" class="w-full border dark:border-slate-600 p-2.5 rounded-lg mb-4 bg-gray-100 dark:bg-slate-600 dark:text-white outline-none" readonly>
@@ -2230,11 +2250,15 @@
 
     function resetFilterSPP() { 
       filterNisSpp = ''; document.getElementById('sppSearch').value = ''; document.getElementById('sppStudentInfo').classList.add('hidden-view'); document.getElementById('sppFormArea').classList.add('hidden-view');
-      document.getElementById('sppSemester').value = ''; document.getElementById('sppBulan').selectedIndex = 0; document.getElementById('sppTagihan').value = ''; document.getElementById('sppBayar').value = ''; document.getElementById('sppBayar').disabled = false; document.getElementById('sppSumber').selectedIndex = 0; document.getElementById('sppTabunganInfo').classList.add('hidden-view'); document.querySelector('input[name="sppAction"][value="nota"]').checked = true; renderAllTables(); 
+      document.getElementById('sppSemester').value = ''; document.getElementById('sppBulan').selectedIndex = 0; document.getElementById('sppTagihan').value = ''; document.getElementById('sppBayar').value = ''; document.getElementById('sppBayar').disabled = false; document.getElementById('sppSumber').selectedIndex = 0; document.getElementById('sppTabunganInfo').classList.add('hidden-view'); document.querySelector('input[name="sppAction"][value="nota"]').checked = true;
+      document.getElementById('sppMultiMode').checked = false; document.getElementById('sppBulanSingleWrap').classList.remove('hidden-view'); document.getElementById('sppMultiBulanWrap').classList.add('hidden-view'); document.getElementById('sppMultiBulanList').innerHTML = '';
+      renderAllTables(); 
     }
     
     function resetFilterTxLain() { 
-      filterNisTxLain = ''; document.getElementById('txlSearch').value = ''; document.getElementById('txlStudentInfo').classList.add('hidden-view'); document.getElementById('txlFormArea').classList.add('hidden-view'); document.getElementById('txlBiaya').selectedIndex = 0; updateBiayaLainDropdown('Semua', ''); document.getElementById('txlTagihan').value = ''; document.getElementById('txlBayar').value = ''; document.getElementById('txlBayar').disabled = false; document.getElementById('txlSumber').selectedIndex = 0; document.getElementById('txlTabunganInfo').classList.add('hidden-view'); document.querySelector('input[name="txlAction"][value="nota"]').checked = true; renderAllTables(); 
+      filterNisTxLain = ''; document.getElementById('txlSearch').value = ''; document.getElementById('txlStudentInfo').classList.add('hidden-view'); document.getElementById('txlFormArea').classList.add('hidden-view'); document.getElementById('txlBiaya').selectedIndex = 0; updateBiayaLainDropdown('Semua', ''); document.getElementById('txlTagihan').value = ''; document.getElementById('txlBayar').value = ''; document.getElementById('txlBayar').disabled = false; document.getElementById('txlSumber').selectedIndex = 0; document.getElementById('txlTabunganInfo').classList.add('hidden-view'); document.querySelector('input[name="txlAction"][value="nota"]').checked = true;
+      document.getElementById('txlMultiMode').checked = false; document.getElementById('txlBiayaSingleWrap').classList.remove('hidden-view'); document.getElementById('txlMultiBiayaWrap').classList.add('hidden-view'); document.getElementById('txlMultiBiayaList').innerHTML = '';
+      renderAllTables(); 
     }
     
     function resetFilterTabungan() { filterNisTabungan = ''; document.getElementById('tabSearch').value = ''; document.getElementById('tabStudentInfo').classList.add('hidden-view'); document.getElementById('tabFormArea').classList.add('hidden-view'); document.getElementById('tabJenis').selectedIndex = 0; document.getElementById('tabNominal').value = ''; document.getElementById('tabKet').value = ''; renderAllTables(); }
@@ -2244,7 +2268,7 @@
       if (s) {
         filterNisSpp = s.NIS; renderAllTables();
         if (s.Status !== 'Aktif') Swal.fire('Perhatian!', `Siswa ini berstatus ${s.Status}.`, 'warning');
-        document.getElementById('sppNama').innerText = s.Nama; document.getElementById('sppKelas').innerText = s.Kelas; document.getElementById('sppBeasiswa').innerText = s.JenisBeasiswa + ' (Rp ' + s.NominalBeasiswa + ')'; document.getElementById('sppWA').value = s.WA; document.getElementById('sppNIS').value = s.NIS; document.getElementById('sppStudentInfo').classList.remove('hidden-view'); document.getElementById('sppFormArea').classList.remove('hidden-view'); document.getElementById('sppSemester').dataset.kelas = s.Kelas; document.getElementById('sppSemester').dataset.potongan = s.NominalBeasiswa || 0; updateSppTagihan();
+        document.getElementById('sppNama').innerText = s.Nama; document.getElementById('sppKelas').innerText = s.Kelas; document.getElementById('sppBeasiswa').innerText = s.JenisBeasiswa + ' (Rp ' + s.NominalBeasiswa + ')'; document.getElementById('sppWA').value = s.WA; document.getElementById('sppNIS').value = s.NIS; document.getElementById('sppStudentInfo').classList.remove('hidden-view'); document.getElementById('sppFormArea').classList.remove('hidden-view'); document.getElementById('sppSemester').dataset.kelas = s.Kelas; document.getElementById('sppSemester').dataset.potongan = s.NominalBeasiswa || 0; if (document.getElementById('sppMultiMode').checked) { renderSppMultiBulanList(); } else { updateSppTagihan(); }
       } else { resetFilterSPP(); }
     });
 
@@ -2263,11 +2287,100 @@
     document.getElementById('sppSumber').addEventListener('change', function() { const nis = document.getElementById('sppNIS').value; const info = document.getElementById('sppTabunganInfo'); if (this.value === 'Uang Tabungan') { info.innerText = `Saldo Tabungan: Rp ${getSaldo(nis)}`; info.classList.remove('hidden-view'); } else { info.classList.add('hidden-view'); } });
 
     function processSPP() {
+      if (document.getElementById('sppMultiMode').checked) return processSPPMulti();
       const nis = document.getElementById('sppNIS').value; const nama = document.getElementById('sppNama').innerText; const wa = document.getElementById('sppWA').value; const sem = document.getElementById('sppSemester').value; const bln = document.getElementById('sppBulan').value; const tagihan = Number(document.getElementById('sppTagihan').value); const bayar = Number(document.getElementById('sppBayar').value); const sumber = document.getElementById('sppSumber').value; const action = document.querySelector('input[name="sppAction"]:checked').value;
       if(!bayar) return Swal.fire('Error', 'Input jumlah bayar', 'error'); if(sumber === 'Uang Tabungan' && getSaldo(nis) < bayar) return Swal.fire('Error', 'Saldo tabungan tidak cukup', 'error');
       const sisa = tagihan - bayar; const payload = { nis, nama, jenisTx: 'SPP', detail: `Sem ${sem} - ${bln}`, tagihan, dibayar: bayar, sisa: sisa > 0 ? sisa : 0, sumberDana: sumber, petugas: currentUser };
       startTopLoading();
       google.script.run.withSuccessHandler(res => { stopTopLoading(); Swal.fire('Sukses', 'Transaksi SPP Tersimpan', 'success'); handlePostTransaction(action, res.txId, res.date, nis, nama, `SPP ${sem} ${bln}`, bayar, sisa > 0 ? sisa : 0, wa); insertSupabaseData('Transaksi', { ID: res.txId, Tanggal: res.date, NIS: nis, Nama: nama, Jenis: 'SPP', Detail: `Sem ${sem} - ${bln}`, Tagihan: tagihan, Dibayar: bayar, Sisa: sisa > 0 ? sisa : 0, SumberDana: sumber, Petugas: currentUser }).catch(e => console.error('Supabase insert Transaksi gagal:', e)); resetFilterSPP(); refreshData(true); }).withFailureHandler(err => { stopTopLoading(); Swal.fire('Error', String(err), 'error'); }).processTransaction(payload);
+    }
+
+    // ==== FITUR BARU: Bayar SPP Beberapa Bulan Sekaligus ====
+    const MONTHS_ALL = ['Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni'];
+
+    function handleSppSemesterChange() {
+      if (document.getElementById('sppMultiMode').checked) { renderSppMultiBulanList(); } else { updateSppTagihan(); }
+    }
+
+    function toggleSppMultiMode() {
+      const multi = document.getElementById('sppMultiMode').checked;
+      document.getElementById('sppBulanSingleWrap').classList.toggle('hidden-view', multi);
+      document.getElementById('sppMultiBulanWrap').classList.toggle('hidden-view', !multi);
+      document.getElementById('sppTagihan').value = '';
+      if (multi) { renderSppMultiBulanList(); } else { document.getElementById('sppBayar').value = ''; document.getElementById('sppBayar').disabled = false; }
+    }
+
+    function renderSppMultiBulanList() {
+      const sem = document.getElementById('sppSemester').value; const kelas = document.getElementById('sppSemester').dataset.kelas; const potongan = Number(document.getElementById('sppSemester').dataset.potongan) || 0; const nis = document.getElementById('sppNIS').value;
+      const wrap = document.getElementById('sppMultiBulanList'); wrap.innerHTML = '';
+      if (!sem || sem === 'Custom' || !kelas || !nis) { wrap.innerHTML = '<p class="text-red-500 text-xs col-span-full">Pilih Semester (Ganjil/Genap) terlebih dahulu. Mode "Custom" tidak mendukung bayar banyak bulan.</p>'; document.getElementById('sppTagihan').value = ''; return; }
+      const kData = appData.Kelas.find(k => k.Kelas == kelas && k.Semester == sem); let baseTagihan = 0; if (kData) baseTagihan = Number(kData.Biaya) - potongan; if (baseTagihan < 0) baseTagihan = 0;
+      const bulanSemester = sem === 'Ganjil' ? MONTHS_ALL.slice(0, 6) : MONTHS_ALL.slice(6, 12);
+      bulanSemester.forEach(bln => {
+        const detailStr = `Sem ${sem} - ${bln}`; const pastTx = appData.Transaksi.filter(t => String(t.NIS) === String(nis) && t.Jenis === 'SPP' && t.Detail === detailStr); const totalPaid = pastTx.reduce((sum, t) => sum + Number(t.Dibayar), 0);
+        let sisa = baseTagihan - totalPaid; if (sisa < 0) sisa = 0; const lunas = baseTagihan > 0 && sisa <= 0;
+        wrap.innerHTML += `<label class="flex items-center justify-between gap-2 p-2 rounded border dark:border-slate-700 ${lunas ? 'opacity-50' : 'hover:bg-blue-50 dark:hover:bg-slate-700'} cursor-pointer">
+          <span class="flex items-center gap-2"><input type="checkbox" class="sppMultiChk w-4 h-4 text-blue-600 rounded" data-bulan="${bln}" data-sisa="${sisa}" onchange="updateSppMultiTotal()" ${lunas ? 'disabled' : ''}><span class="${lunas ? 'line-through text-gray-400' : ''}">${bln}</span></span>
+          <span class="text-xs font-semibold ${lunas ? 'text-gray-400' : 'text-red-500'}">${lunas ? 'Lunas' : 'Sisa Rp ' + sisa.toLocaleString('id-ID')}</span>
+        </label>`;
+      });
+      updateSppMultiTotal();
+    }
+
+    function updateSppMultiTotal() {
+      const checked = Array.from(document.querySelectorAll('.sppMultiChk:checked')); const total = checked.reduce((sum, c) => sum + Number(c.dataset.sisa), 0);
+      document.getElementById('sppTagihan').value = total; document.getElementById('sppBayar').disabled = checked.length === 0;
+    }
+
+    function processSPPMulti() {
+      const nis = document.getElementById('sppNIS').value; const nama = document.getElementById('sppNama').innerText; const wa = document.getElementById('sppWA').value; const sem = document.getElementById('sppSemester').value; const sumber = document.getElementById('sppSumber').value; const action = document.querySelector('input[name="sppAction"]:checked').value;
+      const checked = Array.from(document.querySelectorAll('.sppMultiChk:checked')).sort((a, b) => MONTHS_ALL.indexOf(a.dataset.bulan) - MONTHS_ALL.indexOf(b.dataset.bulan));
+      const totalBayar = Number(document.getElementById('sppBayar').value);
+      if (!checked.length) return Swal.fire('Error', 'Centang minimal satu bulan yang mau dibayar', 'error');
+      if (!totalBayar) return Swal.fire('Error', 'Input total jumlah dibayar', 'error');
+      if (sumber === 'Uang Tabungan' && getSaldo(nis) < totalBayar) return Swal.fire('Error', 'Saldo tabungan tidak cukup', 'error');
+
+      let remaining = totalBayar; const items = [];
+      for (const c of checked) {
+        if (remaining <= 0) break;
+        const sisaBulan = Number(c.dataset.sisa); if (sisaBulan <= 0) continue;
+        const bayarBulan = Math.min(remaining, sisaBulan); remaining -= bayarBulan;
+        items.push({ bln: c.dataset.bulan, tagihan: sisaBulan, bayar: bayarBulan, sisa: sisaBulan - bayarBulan });
+      }
+      if (!items.length) return Swal.fire('Error', 'Nominal tidak cukup untuk membayar bulan manapun', 'error');
+      if (remaining > 0) Swal.fire({ icon: 'info', title: 'Info', text: `Sisa dana Rp ${remaining.toLocaleString('id-ID')} tidak teralokasi karena bulan-bulan terpilih sudah tercukupi.`, timer: 3500, showConfirmButton: false });
+
+      startTopLoading();
+      processSppQueue(items, 0, { nis, nama, wa, sem, sumber, action }, []);
+    }
+
+    function processSppQueue(items, idx, ctx, results) {
+      if (idx >= items.length) {
+        stopTopLoading();
+        const totalPaid = results.reduce((s, r) => s + r.bayar, 0);
+        Swal.fire('Sukses', `Pembayaran SPP untuk ${results.length} bulan berhasil disimpan (Total Rp ${totalPaid.toLocaleString('id-ID')})`, 'success');
+        handlePostTransactionMultiSpp(ctx.action, results, ctx.nis, ctx.nama, ctx.wa, ctx.sem);
+        resetFilterSPP(); refreshData(true);
+        return;
+      }
+      const item = items[idx];
+      const payload = { nis: ctx.nis, nama: ctx.nama, jenisTx: 'SPP', detail: `Sem ${ctx.sem} - ${item.bln}`, tagihan: item.tagihan, dibayar: item.bayar, sisa: item.sisa > 0 ? item.sisa : 0, sumberDana: ctx.sumber, petugas: currentUser };
+      google.script.run.withSuccessHandler(res => {
+        insertSupabaseData('Transaksi', { ID: res.txId, Tanggal: res.date, NIS: ctx.nis, Nama: ctx.nama, Jenis: 'SPP', Detail: `Sem ${ctx.sem} - ${item.bln}`, Tagihan: item.tagihan, Dibayar: item.bayar, Sisa: item.sisa > 0 ? item.sisa : 0, SumberDana: ctx.sumber, Petugas: currentUser }).catch(e => console.error('Supabase insert Transaksi gagal:', e));
+        results.push({ bln: item.bln, bayar: item.bayar, sisa: item.sisa, txId: res.txId, date: res.date });
+        processSppQueue(items, idx + 1, ctx, results);
+      }).withFailureHandler(err => { stopTopLoading(); Swal.fire('Error', `Gagal memproses bulan ${item.bln}: ${String(err)}. Bulan sebelumnya yang sudah berhasil tetap tersimpan.`, 'error'); refreshData(true); }).processTransaction(payload);
+    }
+
+    function handlePostTransactionMultiSpp(action, results, nis, nama, wa, sem) {
+      const totalBayar = results.reduce((s, r) => s + r.bayar, 0); const lastDate = results[results.length - 1].date; const lastTxId = results[results.length - 1].txId;
+      const detailList = results.map(r => `${r.bln}${r.sisa > 0 ? ' (angsuran, sisa Rp ' + r.sisa.toLocaleString('id-ID') + ')' : ' (lunas)'}`).join(', ');
+      if (action === 'nota' || action === 'both') {
+        populateKop(); hideAllPrintAreas();
+        document.getElementById('prTx').innerText = lastTxId; document.getElementById('prTgl').innerText = lastDate; document.getElementById('prSiswa').innerText = `${nis} / ${nama}`; document.getElementById('prJenis').innerText = `SPP Sem ${sem} (${results.length} Bulan)`; document.getElementById('prDesc').innerText = `Bulan: ${detailList}`; document.getElementById('prNominal').innerText = totalBayar; document.getElementById('prPetugas').innerText = currentUser;
+        document.getElementById('printReceiptArea').classList.remove('hidden-view'); document.getElementById('print-section').classList.remove('hidden-view'); window.print(); document.getElementById('print-section').classList.add('hidden-view'); document.getElementById('printReceiptArea').classList.add('hidden-view');
+      }
+      if (action === 'wa' || action === 'both') { if (wa) { window.open(`https://wa.me/${wa}?text=${encodeURIComponent(`Halo Orang Tua/Wali ${nama}, terima kasih atas pembayaran SPP sebesar Rp ${totalBayar.toLocaleString('id-ID')} pada ${lastDate} untuk bulan: ${detailList}.`)}`, '_blank'); } else { Swal.fire('Info', 'Nomor WA tidak tersimpan', 'info'); } }
     }
 
     function toggleKasColor() {
@@ -2315,7 +2428,7 @@
     document.getElementById('txlSearch').addEventListener('change', function() {
       const s = getSiswaFromSearch(this.value);
       if(s) { 
-        filterNisTxLain = s.NIS; renderAllTables(); document.getElementById('txlNama').innerText = s.Nama; document.getElementById('txlKelas').innerText = s.Kelas; document.getElementById('txlWA').value = s.WA; document.getElementById('txlNIS').value = s.NIS; updateBiayaLainDropdown(s.Kelas, s.NIS); document.getElementById('txlStudentInfo').classList.remove('hidden-view'); document.getElementById('txlFormArea').classList.remove('hidden-view'); document.getElementById('txlBiaya').selectedIndex = 0; document.getElementById('txlTagihan').value = '';
+        filterNisTxLain = s.NIS; renderAllTables(); document.getElementById('txlNama').innerText = s.Nama; document.getElementById('txlKelas').innerText = s.Kelas; document.getElementById('txlWA').value = s.WA; document.getElementById('txlNIS').value = s.NIS; updateBiayaLainDropdown(s.Kelas, s.NIS); document.getElementById('txlStudentInfo').classList.remove('hidden-view'); document.getElementById('txlFormArea').classList.remove('hidden-view'); document.getElementById('txlBiaya').selectedIndex = 0; document.getElementById('txlTagihan').value = ''; if (document.getElementById('txlMultiMode').checked) renderTxlMultiBiayaList();
       } else { resetFilterTxLain(); }
     });
 
@@ -2330,11 +2443,103 @@
     document.getElementById('txlSumber').addEventListener('change', function() { const info = document.getElementById('txlTabunganInfo'); if (this.value === 'Uang Tabungan') { info.innerText = `Saldo Tabungan: Rp ${getSaldo(document.getElementById('txlNIS').value)}`; info.classList.remove('hidden-view'); } else { info.classList.add('hidden-view'); } });
 
     function processTxLain() {
+      if (document.getElementById('txlMultiMode').checked) return processTxLainMulti();
       const nis = document.getElementById('txlNIS').value; const nama = document.getElementById('txlNama').innerText; const wa = document.getElementById('txlWA').value; const biayaSel = document.getElementById('txlBiaya'); const namaBiaya = biayaSel.options[biayaSel.selectedIndex].text; const tagihan = Number(document.getElementById('txlTagihan').value); const bayar = Number(document.getElementById('txlBayar').value); const sumber = document.getElementById('txlSumber').value; const action = document.querySelector('input[name="txlAction"]:checked').value;
       if(!bayar || !namaBiaya) return Swal.fire('Error', 'Lengkapi form', 'error'); if(sumber === 'Uang Tabungan' && getSaldo(nis) < bayar) return Swal.fire('Error', 'Saldo kurang', 'error');
       const sisa = tagihan - bayar; const payload = { nis, nama, jenisTx: 'Lainnya', detail: namaBiaya, tagihan, dibayar: bayar, sisa: sisa > 0 ? sisa : 0, sumberDana: sumber, petugas: currentUser };
       startTopLoading();
       google.script.run.withSuccessHandler(res => { stopTopLoading(); Swal.fire('Sukses', 'Transaksi Berhasil', 'success'); handlePostTransaction(action, res.txId, res.date, nis, nama, namaBiaya, bayar, sisa > 0 ? sisa : 0, wa); insertSupabaseData('Transaksi', { ID: res.txId, Tanggal: res.date, NIS: nis, Nama: nama, Jenis: 'Lainnya', Detail: namaBiaya, Tagihan: tagihan, Dibayar: bayar, Sisa: sisa > 0 ? sisa : 0, SumberDana: sumber, Petugas: currentUser }).catch(e => console.error('Supabase insert Transaksi gagal:', e)); resetFilterTxLain(); refreshData(true); }).withFailureHandler(err => { stopTopLoading(); Swal.fire('Error', String(err), 'error'); }).processTransaction(payload);
+    }
+
+    // ==== FITUR BARU: Bayar Beberapa Biaya Lain Sekaligus + Alokasi Otomatis ====
+    function toggleTxlMultiMode() {
+      const multi = document.getElementById('txlMultiMode').checked;
+      document.getElementById('txlBiayaSingleWrap').classList.toggle('hidden-view', multi);
+      document.getElementById('txlMultiBiayaWrap').classList.toggle('hidden-view', !multi);
+      document.getElementById('txlTagihan').value = '';
+      if (multi) { renderTxlMultiBiayaList(); } else { document.getElementById('txlBayar').value = ''; document.getElementById('txlBayar').disabled = false; }
+    }
+
+    function getApplicableBiayaWithSisa(nis, kelas) {
+      const list = appData.BiayaLain.filter(b => { if (b.NIS && b.NIS.toString().trim() !== "") { return b.NIS.toString() === nis.toString(); } return isKelasMatch(b.Kelas, kelas); });
+      return list.map(b => {
+        const namaBiayaBase = (b.NamaBiaya || '').toLowerCase();
+        const txBiaya = appData.Transaksi.filter(t => String(t.NIS) === String(nis) && t.Jenis !== 'SPP' && t.Jenis !== 'Pengeluaran' && t.Jenis !== 'Pemasukan' && (t.Detail || '').toLowerCase().includes(namaBiayaBase));
+        const totalPaid = txBiaya.reduce((sum, t) => sum + Number(t.Dibayar), 0); const tagihan = Number(b.Nominal) || 0; const sisa = Math.max(0, tagihan - totalPaid);
+        return { nama: b.NamaBiaya, tagihan, sisa };
+      });
+    }
+
+    function renderTxlMultiBiayaList() {
+      const nis = document.getElementById('txlNIS').value; const kelas = document.getElementById('txlKelas').innerText;
+      const wrap = document.getElementById('txlMultiBiayaList'); wrap.innerHTML = '';
+      if (!nis) { wrap.innerHTML = '<p class="text-red-500 text-xs">Pilih siswa terlebih dahulu.</p>'; document.getElementById('txlTagihan').value = ''; return; }
+      const list = getApplicableBiayaWithSisa(nis, kelas);
+      if (!list.length) { wrap.innerHTML = '<p class="text-gray-400 text-xs italic">Tidak ada biaya lain untuk siswa ini.</p>'; document.getElementById('txlTagihan').value = ''; return; }
+      list.forEach(item => {
+        const lunas = item.tagihan > 0 && item.sisa <= 0;
+        wrap.innerHTML += `<label class="flex items-center justify-between gap-2 p-2 rounded border dark:border-slate-700 ${lunas ? 'opacity-50' : 'hover:bg-indigo-50 dark:hover:bg-slate-700'} cursor-pointer">
+          <span class="flex items-center gap-2"><input type="checkbox" class="txlMultiChk w-4 h-4 text-indigo-600 rounded" data-nama="${item.nama}" data-tagihan="${item.tagihan}" data-sisa="${item.sisa}" onchange="updateTxlMultiTotal()" ${lunas ? 'disabled' : ''}><span class="${lunas ? 'line-through text-gray-400' : ''}">${item.nama}</span></span>
+          <span class="text-xs font-semibold ${lunas ? 'text-gray-400' : 'text-red-500'}">${lunas ? 'Lunas' : 'Sisa Rp ' + item.sisa.toLocaleString('id-ID')}</span>
+        </label>`;
+      });
+      updateTxlMultiTotal();
+    }
+
+    function updateTxlMultiTotal() {
+      const checked = Array.from(document.querySelectorAll('.txlMultiChk:checked')); const total = checked.reduce((sum, c) => sum + Number(c.dataset.sisa), 0);
+      document.getElementById('txlTagihan').value = total; document.getElementById('txlBayar').disabled = checked.length === 0;
+    }
+
+    function processTxLainMulti() {
+      const nis = document.getElementById('txlNIS').value; const nama = document.getElementById('txlNama').innerText; const wa = document.getElementById('txlWA').value; const sumber = document.getElementById('txlSumber').value; const action = document.querySelector('input[name="txlAction"]:checked').value;
+      const checked = Array.from(document.querySelectorAll('.txlMultiChk:checked'));
+      const totalBayar = Number(document.getElementById('txlBayar').value);
+      if (!checked.length) return Swal.fire('Error', 'Centang minimal satu biaya yang mau dibayar', 'error');
+      if (!totalBayar) return Swal.fire('Error', 'Input total jumlah dibayar', 'error');
+      if (sumber === 'Uang Tabungan' && getSaldo(nis) < totalBayar) return Swal.fire('Error', 'Saldo tabungan tidak cukup', 'error');
+
+      let remaining = totalBayar; const items = [];
+      for (const c of checked) {
+        if (remaining <= 0) break;
+        const sisaBiaya = Number(c.dataset.sisa); if (sisaBiaya <= 0) continue;
+        const bayarBiaya = Math.min(remaining, sisaBiaya); remaining -= bayarBiaya;
+        items.push({ nama: c.dataset.nama, tagihan: Number(c.dataset.tagihan), bayar: bayarBiaya, sisa: sisaBiaya - bayarBiaya });
+      }
+      if (!items.length) return Swal.fire('Error', 'Nominal tidak cukup untuk membayar biaya manapun', 'error');
+      if (remaining > 0) Swal.fire({ icon: 'info', title: 'Info', text: `Sisa dana Rp ${remaining.toLocaleString('id-ID')} tidak teralokasi karena biaya-biaya terpilih sudah tercukupi.`, timer: 3500, showConfirmButton: false });
+
+      startTopLoading();
+      processTxlQueue(items, 0, { nis, nama, wa, sumber, action }, []);
+    }
+
+    function processTxlQueue(items, idx, ctx, results) {
+      if (idx >= items.length) {
+        stopTopLoading();
+        const totalPaid = results.reduce((s, r) => s + r.bayar, 0);
+        Swal.fire('Sukses', `Pembayaran untuk ${results.length} jenis biaya berhasil disimpan (Total Rp ${totalPaid.toLocaleString('id-ID')})`, 'success');
+        handlePostTransactionMultiLain(ctx.action, results, ctx.nis, ctx.nama, ctx.wa);
+        resetFilterTxLain(); refreshData(true);
+        return;
+      }
+      const item = items[idx];
+      const payload = { nis: ctx.nis, nama: ctx.nama, jenisTx: 'Lainnya', detail: item.nama, tagihan: item.tagihan, dibayar: item.bayar, sisa: item.sisa > 0 ? item.sisa : 0, sumberDana: ctx.sumber, petugas: currentUser };
+      google.script.run.withSuccessHandler(res => {
+        insertSupabaseData('Transaksi', { ID: res.txId, Tanggal: res.date, NIS: ctx.nis, Nama: ctx.nama, Jenis: 'Lainnya', Detail: item.nama, Tagihan: item.tagihan, Dibayar: item.bayar, Sisa: item.sisa > 0 ? item.sisa : 0, SumberDana: ctx.sumber, Petugas: currentUser }).catch(e => console.error('Supabase insert Transaksi gagal:', e));
+        results.push({ nama: item.nama, bayar: item.bayar, sisa: item.sisa, txId: res.txId, date: res.date });
+        processTxlQueue(items, idx + 1, ctx, results);
+      }).withFailureHandler(err => { stopTopLoading(); Swal.fire('Error', `Gagal memproses biaya ${item.nama}: ${String(err)}. Biaya sebelumnya yang sudah berhasil tetap tersimpan.`, 'error'); refreshData(true); }).processTransaction(payload);
+    }
+
+    function handlePostTransactionMultiLain(action, results, nis, nama, wa) {
+      const totalBayar = results.reduce((s, r) => s + r.bayar, 0); const lastDate = results[results.length - 1].date; const lastTxId = results[results.length - 1].txId;
+      const detailList = results.map(r => `${r.nama}${r.sisa > 0 ? ' (angsuran, sisa Rp ' + r.sisa.toLocaleString('id-ID') + ')' : ' (lunas)'}`).join(', ');
+      if (action === 'nota' || action === 'both') {
+        populateKop(); hideAllPrintAreas();
+        document.getElementById('prTx').innerText = lastTxId; document.getElementById('prTgl').innerText = lastDate; document.getElementById('prSiswa').innerText = `${nis} / ${nama}`; document.getElementById('prJenis').innerText = `Biaya Lainnya (${results.length} Item)`; document.getElementById('prDesc').innerText = `Rincian: ${detailList}`; document.getElementById('prNominal').innerText = totalBayar; document.getElementById('prPetugas').innerText = currentUser;
+        document.getElementById('printReceiptArea').classList.remove('hidden-view'); document.getElementById('print-section').classList.remove('hidden-view'); window.print(); document.getElementById('print-section').classList.add('hidden-view'); document.getElementById('printReceiptArea').classList.add('hidden-view');
+      }
+      if (action === 'wa' || action === 'both') { if (wa) { window.open(`https://wa.me/${wa}?text=${encodeURIComponent(`Halo Orang Tua/Wali ${nama}, terima kasih atas pembayaran biaya lainnya sebesar Rp ${totalBayar.toLocaleString('id-ID')} pada ${lastDate} untuk: ${detailList}.`)}`, '_blank'); } else { Swal.fire('Info', 'Nomor WA tidak tersimpan', 'info'); } }
     }
 
     document.getElementById('tabSearch').addEventListener('change', function() { const s = getSiswaFromSearch(this.value); if(s) { filterNisTabungan = s.NIS; document.getElementById('tabNama').innerText = s.Nama; document.getElementById('tabSaldo').innerText = getSaldo(s.NIS); document.getElementById('tabNIS').value = s.NIS; document.getElementById('tabStudentInfo').classList.remove('hidden-view'); document.getElementById('tabFormArea').classList.remove('hidden-view'); renderAllTables(); } else { resetFilterTabungan(); } });
