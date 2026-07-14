@@ -714,9 +714,9 @@
               </div>
               <div>
                 <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">3. Kategori</label>
-                <select id="skKategori" class="w-full border dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                <select id="skKategori" onchange="onSkKategoriChange()" class="w-full border dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
                   <option value="Tidak Ada">Tidak Ada (Normal)</option>
-                  <option value="Yatim">Yatim</option>
+                  <option value="Yatim">Yatim (SPP Gratis / Rp 0)</option>
                   <option value="Piatu">Piatu</option>
                   <option value="Dhuafa">Dhuafa</option>
                   <option value="Saudara Kandung">Saudara Kandung</option>
@@ -725,7 +725,7 @@
               <div>
                 <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">4. Nominal SPP Khusus (Per Bulan)</label>
                 <input type="number" id="skNominal" placeholder="Cth: 50000" class="w-full border dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                <p class="text-xs text-gray-500 mt-1">*Nominal ini akan menggantikan Biaya SPP normal kelas untuk siswa terpilih.</p>
+                <p class="text-xs text-gray-500 mt-1">*Nominal ini akan menggantikan Biaya SPP normal kelas untuk siswa terpilih. Khusus kategori <b>Yatim</b>, SPP otomatis Rp 0 (gratis) dan kolom ini nonaktif.</p>
               </div>
               <div class="sm:col-span-2 flex gap-2 mt-2">
                 <button type="button" onclick="submitSiswaKhusus()" id="btnSubmitSiswaKhusus" class="bg-rose-600 text-white px-6 py-2.5 rounded-lg hover:bg-rose-700 transition font-bold shadow-md"><i class="fas fa-save mr-2"></i>Simpan Kategori Siswa</button>
@@ -1516,11 +1516,21 @@
     // Menghitung nominal SPP per bulan untuk seorang siswa.
     // Jika siswa termasuk kategori khusus (Yatim/Piatu/Dhuafa/Saudara Kandung)
     // maka nominal SPP-nya memakai NominalSppKhusus, TIDAK memakai Biaya Kelas - Beasiswa.
+    // KHUSUS kategori "Yatim": SPP otomatis Rp 0 (gratis / tidak ada kewajiban bayar),
+    // berapa pun nilai NominalSppKhusus yang tersimpan.
     function getSppBiayaSiswa(s, kData) {
-      if (isSiswaKhususKategori(s)) return Math.max(0, Number(s.NominalSppKhusus) || 0);
+      if (isSiswaKhususKategori(s)) {
+        if ((s.KategoriKhusus || '').toString().trim() === 'Yatim') return 0;
+        return Math.max(0, Number(s.NominalSppKhusus) || 0);
+      }
       let baseBiaya = kData ? Number(kData.Biaya) : 0;
       let beasiswa = Number((s && s.NominalBeasiswa) || 0);
       return Math.max(0, baseBiaya - beasiswa);
+    }
+
+    // True jika siswa dibebaskan total dari kewajiban bayar SPP (kategori Yatim).
+    function isSppGratisSiswa(s) {
+      return !!(s && isSiswaKhususKategori(s) && (s.KategoriKhusus || '').toString().trim() === 'Yatim');
     }
 
     // Filter States
@@ -1968,19 +1978,36 @@
       const s = appData.Data.find(x => x.NIS == nis);
       document.getElementById('skKategori').value = (s && isSiswaKhususKategori(s)) ? s.KategoriKhusus : 'Tidak Ada';
       document.getElementById('skNominal').value = (s && s.NominalSppKhusus) ? s.NominalSppKhusus : '';
+      onSkKategoriChange();
+    }
+
+    function onSkKategoriChange() {
+      const kategori = document.getElementById('skKategori').value;
+      const nominalInput = document.getElementById('skNominal');
+      if (kategori === 'Yatim') {
+        nominalInput.value = 0;
+        nominalInput.readOnly = true;
+        nominalInput.classList.add('opacity-60', 'cursor-not-allowed');
+      } else {
+        nominalInput.readOnly = false;
+        nominalInput.classList.remove('opacity-60', 'cursor-not-allowed');
+        if (kategori === 'Tidak Ada') nominalInput.value = '';
+      }
     }
 
     function resetSkForm() {
       document.getElementById('skKategori').value = 'Tidak Ada';
       document.getElementById('skNominal').value = '';
+      onSkKategoriChange();
     }
 
     function submitSiswaKhusus() {
       const nis = document.getElementById('skSiswaSelect').value;
       if (!nis) return Swal.fire('Error', 'Pilih kelas dan siswa terlebih dahulu', 'error');
       const kategori = document.getElementById('skKategori').value;
-      const nominal = Number(document.getElementById('skNominal').value) || 0;
-      if (kategori !== 'Tidak Ada' && nominal <= 0) return Swal.fire('Error', 'Isi Nominal SPP Khusus untuk kategori yang dipilih', 'error');
+      // Kategori "Yatim" SPP-nya otomatis Rp 0 (gratis), berapapun input nominalnya.
+      const nominal = kategori === 'Yatim' ? 0 : (Number(document.getElementById('skNominal').value) || 0);
+      if (kategori !== 'Tidak Ada' && kategori !== 'Yatim' && nominal <= 0) return Swal.fire('Error', 'Isi Nominal SPP Khusus untuk kategori yang dipilih', 'error');
 
       const s = appData.Data.find(x => x.NIS == nis); if (!s) return Swal.fire('Error', 'Data siswa tidak ditemukan', 'error');
       const record = { NIS: s.NIS, Nama: s.Nama, Alamat: s.Alamat, OrangTua: s.OrangTua, WA: s.WA, Kelas: s.Kelas, Status: s.Status, JenisBeasiswa: s.JenisBeasiswa, NominalBeasiswa: s.NominalBeasiswa, Password: '', KategoriKhusus: kategori, NominalSppKhusus: kategori === 'Tidak Ada' ? 0 : nominal };
@@ -2006,7 +2033,7 @@
           <td class="p-3">${s.Nama}</td>
           <td class="p-3">${s.Kelas}</td>
           <td class="p-3"><span class="text-xs font-bold text-rose-600 bg-rose-100 dark:bg-rose-900/30 px-2 py-1 rounded-full">${s.KategoriKhusus}</span></td>
-          <td class="p-3">Rp ${Number(s.NominalSppKhusus || 0).toLocaleString('id-ID')}</td>
+          <td class="p-3">${isSppGratisSiswa(s) ? '<span class="text-xs font-bold text-green-600 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-full">GRATIS (Rp 0)</span>' : 'Rp ' + Number(s.NominalSppKhusus || 0).toLocaleString('id-ID')}</td>
           <td class="p-3 text-right"><button onclick="hapusKategoriKhusus('${s.NIS}')" class="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-300 dark:border-red-700 px-3 py-1 rounded-lg text-xs hover:bg-red-200 dark:hover:bg-red-800/50 transition font-semibold"><i class="fas fa-times mr-1"></i>Hapus</button></td>
         </tr>`).join('');
     }
@@ -2424,7 +2451,9 @@
       if(sem === 'Custom') { tagihanInput.readOnly = false; tagihanInput.value = ''; tagihanInput.focus(); bayarInput.disabled = false; } else {
         tagihanInput.readOnly = true; const kData = appData.Kelas.find(k => k.Kelas == kelas && k.Semester == sem); const sObjTagihan = appData.Data.find(x => x.NIS == nis); let baseTagihan = getSppBiayaSiswa(sObjTagihan, kData);
         const detailStr = `Sem ${sem} - ${bln}`; const pastTx = appData.Transaksi.filter(t => String(t.NIS) === String(nis) && t.Jenis === 'SPP' && t.Detail === detailStr); const totalPaid = pastTx.reduce((sum, t) => sum + Number(t.Dibayar), 0);
-        let sisa = baseTagihan - totalPaid; if (sisa <= 0 && baseTagihan > 0) { Swal.fire('Info', `Tagihan SPP bulan ${bln} sudah LUNAS.`, 'info'); sisa = 0; bayarInput.disabled = true; bayarInput.value = ''; } else { bayarInput.disabled = false; }
+        let sisa = baseTagihan - totalPaid;
+        if (isSppGratisSiswa(sObjTagihan)) { sisa = 0; bayarInput.disabled = true; bayarInput.value = ''; }
+        else if (sisa <= 0 && baseTagihan > 0) { Swal.fire('Info', `Tagihan SPP bulan ${bln} sudah LUNAS.`, 'info'); sisa = 0; bayarInput.disabled = true; bayarInput.value = ''; } else { bayarInput.disabled = false; }
         tagihanInput.value = sisa;
       }
     }
@@ -2461,13 +2490,14 @@
       const wrap = document.getElementById('sppMultiBulanList'); wrap.innerHTML = '';
       if (!sem || sem === 'Custom' || !kelas || !nis) { wrap.innerHTML = '<p class="text-red-500 text-xs col-span-full">Pilih Semester (Ganjil/Genap) terlebih dahulu. Mode "Custom" tidak mendukung bayar banyak bulan.</p>'; document.getElementById('sppTagihan').value = ''; return; }
       const kData = appData.Kelas.find(k => k.Kelas == kelas && k.Semester == sem); const sObjMulti = appData.Data.find(x => x.NIS == nis); let baseTagihan = getSppBiayaSiswa(sObjMulti, kData);
+      const isGratis = isSppGratisSiswa(sObjMulti);
       const bulanSemester = sem === 'Ganjil' ? MONTHS_ALL.slice(0, 6) : MONTHS_ALL.slice(6, 12);
       bulanSemester.forEach(bln => {
         const detailStr = `Sem ${sem} - ${bln}`; const pastTx = appData.Transaksi.filter(t => String(t.NIS) === String(nis) && t.Jenis === 'SPP' && t.Detail === detailStr); const totalPaid = pastTx.reduce((sum, t) => sum + Number(t.Dibayar), 0);
-        let sisa = baseTagihan - totalPaid; if (sisa < 0) sisa = 0; const lunas = baseTagihan > 0 && sisa <= 0;
+        let sisa = baseTagihan - totalPaid; if (sisa < 0) sisa = 0; const lunas = isGratis || (baseTagihan > 0 && sisa <= 0);
         wrap.innerHTML += `<label class="flex items-center justify-between gap-2 p-2 rounded border dark:border-slate-700 ${lunas ? 'opacity-50' : 'hover:bg-blue-50 dark:hover:bg-slate-700'} cursor-pointer">
           <span class="flex items-center gap-2"><input type="checkbox" class="sppMultiChk w-4 h-4 text-blue-600 rounded" data-bulan="${bln}" data-sisa="${sisa}" onchange="updateSppMultiTotal()" ${lunas ? 'disabled' : ''}><span class="${lunas ? 'line-through text-gray-400' : ''}">${bln}</span></span>
-          <span class="text-xs font-semibold ${lunas ? 'text-gray-400' : 'text-red-500'}">${lunas ? 'Lunas' : 'Sisa Rp ' + sisa.toLocaleString('id-ID')}</span>
+          <span class="text-xs font-semibold ${lunas ? 'text-gray-400' : 'text-red-500'}">${isGratis ? 'Gratis' : (lunas ? 'Lunas' : 'Sisa Rp ' + sisa.toLocaleString('id-ID'))}</span>
         </label>`;
       });
       updateSppMultiTotal();
@@ -3398,9 +3428,9 @@
       if(!nis) return; const s = appData.Data.find(x => x.NIS == nis); if(!s) return Swal.fire('Error', 'Siswa dengan NIS tersebut tidak ditemukan', 'error');
       const txList = appData.Transaksi.filter(t => String(t.NIS) === String(nis)); const tbList = appData.Tabungan.filter(t => String(t.NIS) === String(nis));
       
-      let html = `<div class="mb-8 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl border border-blue-100 dark:border-slate-600 shadow-md flex items-center gap-4"><div class="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl shadow-lg shrink-0"><i class="fas fa-user-graduate"></i></div><div><h3 class="text-2xl font-extrabold text-gray-800 dark:text-gray-100">${s.Nama}</h3><p class="text-sm text-gray-600 dark:text-gray-300 font-medium hidden">NIS: ${s.NIS} &bull; Kelas: ${s.Kelas}</p><p class="text-sm text-blue-700 dark:text-blue-300 font-semibold mt-1 hidden"><i class="fas fa-award mr-1"></i> Beasiswa: ${s.JenisBeasiswa} (Rp ${s.NominalBeasiswa || 0})</p></div></div>`;
+      let html = `<div class="mb-8 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl border border-blue-100 dark:border-slate-600 shadow-md flex items-center gap-4"><div class="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl shadow-lg shrink-0"><i class="fas fa-user-graduate"></i></div><div><h3 class="text-2xl font-extrabold text-gray-800 dark:text-gray-100">${s.Nama}</h3><p class="text-sm text-gray-600 dark:text-gray-300 font-medium hidden">NIS: ${s.NIS} &bull; Kelas: ${s.Kelas}</p><p class="text-sm text-blue-700 dark:text-blue-300 font-semibold mt-1 hidden"><i class="fas fa-award mr-1"></i> Beasiswa: ${s.JenisBeasiswa} (Rp ${s.NominalBeasiswa || 0})</p>${isSppGratisSiswa(s) ? '<p class="text-sm text-green-700 dark:text-green-400 font-bold mt-1"><i class="fas fa-heart mr-1"></i> Kategori Yatim - SPP Gratis</p>' : ''}</div></div>`;
 
-      let kData = appData.Kelas.find(k => k.Kelas === s.Kelas); let baseBiaya = kData ? Number(kData.Biaya) : 0; let tagihanSiswa = getSppBiayaSiswa(s, kData);
+      let kData = appData.Kelas.find(k => k.Kelas === s.Kelas); let baseBiaya = kData ? Number(kData.Biaya) : 0; let tagihanSiswa = getSppBiayaSiswa(s, kData); const sppGratis = isSppGratisSiswa(s);
       
       const months = ['Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni'];
       
@@ -3410,7 +3440,7 @@
       months.forEach(m => {
           let txM = txList.filter(t => t.Jenis === 'SPP' && t.Detail.includes(m)); let totalPaid = txM.reduce((sum, t) => sum + Number(t.Dibayar), 0);
           let hasLunasTx = txM.some(t => Number(t.Sisa) === 0); let sisa = tagihanSiswa - totalPaid;
-          let cellContent = ''; if (tagihanSiswa === 0 && baseBiaya === 0) { cellContent = '<span class="text-gray-400">-</span>'; } else if (hasLunasTx || (sisa <= 0 && totalPaid > 0)) { cellContent = '<i class="fas fa-check-circle text-green-500 text-xl" title="Lunas"></i>'; } else if (totalPaid > 0) { cellContent = `<span class="text-[11px] font-bold text-orange-600 bg-orange-100 dark:bg-orange-900/40 px-2 py-1 rounded-full shadow-sm whitespace-nowrap">Rp ${totalPaid.toLocaleString('id-ID')}</span>`; } else { cellContent = '<i class="fas fa-times-circle text-red-400 text-xl" title="Belum Bayar"></i>'; }
+          let cellContent = ''; if (sppGratis) { cellContent = '<i class="fas fa-check-circle text-green-500 text-xl" title="Lunas (Gratis - Yatim)"></i>'; } else if (tagihanSiswa === 0 && baseBiaya === 0) { cellContent = '<span class="text-gray-400">-</span>'; } else if (hasLunasTx || (sisa <= 0 && totalPaid > 0)) { cellContent = '<i class="fas fa-check-circle text-green-500 text-xl" title="Lunas"></i>'; } else if (totalPaid > 0) { cellContent = `<span class="text-[11px] font-bold text-orange-600 bg-orange-100 dark:bg-orange-900/40 px-2 py-1 rounded-full shadow-sm whitespace-nowrap">Rp ${totalPaid.toLocaleString('id-ID')}</span>`; } else { cellContent = '<i class="fas fa-times-circle text-red-400 text-xl" title="Belum Bayar"></i>'; }
           html += `<td class="p-3 text-center border-t border-gray-100 dark:border-slate-700">${cellContent}</td>`;
       });
       html += `</tr></tbody></table></div></div>`;
