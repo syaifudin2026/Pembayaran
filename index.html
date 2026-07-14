@@ -824,6 +824,48 @@
               <button id="btnNext_BiayaLain" onclick="changePage('BiayaLain', 1)" class="bg-white dark:bg-slate-700 border dark:border-slate-600 dark:text-white px-4 py-1.5 rounded-lg text-sm hover:bg-gray-100 dark:hover:bg-slate-600 disabled:opacity-50 transition font-semibold">Next<i class="fas fa-chevron-right ml-1"></i></button>
             </div>
           </div>
+
+          <!-- TAMBAHAN: Kategori Yatim - Biaya Lainnya Digratiskan per Siswa -->
+          <div class="mt-10">
+            <h3 class="font-extrabold text-xl text-gray-800 dark:text-gray-100 mb-1"><i class="fas fa-hand-holding-heart mr-2 text-rose-500"></i>Kategori Yatim &ndash; Biaya Lainnya Digratiskan</h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Pilih <b>Kelas</b>, lalu pilih <b>Nama Siswa</b> (mis. siswa Yatim), kemudian centang satu atau beberapa item <b>Biaya Lainnya</b> (boleh 2, 3, 4, atau lebih) yang ingin digratiskan khusus untuk siswa tersebut. Item yang dicentang otomatis <b>tidak akan tampil pada form pembayaran</b> maupun <b>akun laporan siswa</b>, dan siswa <b>tidak memiliki tagihan</b> pada item tersebut. Item yang tidak dicentang tetap tertagih normal.</p>
+
+            <div id="formBiayaGratis" class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl bg-gray-50 dark:bg-slate-900/50 p-6 rounded-xl border dark:border-slate-700">
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">1. Pilih Kelas</label>
+                <select id="ymKelas" onchange="onYmKelasChange()" class="w-full border dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                  <option value="">-- Pilih Kelas --</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">2. Pilih Nama Siswa</label>
+                <select id="ymSiswaSelect" onchange="onYmSiswaChange()" class="w-full border dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                  <option value="">-- Pilih Kelas Dahulu --</option>
+                </select>
+              </div>
+              <div class="sm:col-span-2">
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">3. Pilih Item Biaya yang Digratiskan (boleh lebih dari satu)</label>
+                <div id="ymBiayaContainer" class="w-full border dark:border-slate-600 bg-white dark:bg-slate-700 p-3 rounded-lg max-h-48 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <p class="text-xs text-gray-400 italic col-span-2">Pilih kelas &amp; siswa terlebih dahulu.</p>
+                </div>
+              </div>
+              <div class="sm:col-span-2 flex gap-2 mt-2">
+                <button type="button" onclick="submitBiayaGratis()" id="btnSubmitBiayaGratis" class="bg-rose-600 text-white px-6 py-2.5 rounded-lg hover:bg-rose-700 transition font-bold shadow-md"><i class="fas fa-save mr-2"></i>Simpan Biaya Gratis</button>
+              </div>
+            </div>
+
+            <div class="mt-6">
+              <h4 class="font-bold text-gray-700 dark:text-gray-300 mb-2 text-sm">Daftar Siswa dengan Biaya Lainnya Digratiskan</h4>
+              <div class="overflow-x-auto border dark:border-slate-700 shadow-sm rounded-lg">
+                <table class="w-full text-sm text-left text-gray-600 dark:text-gray-300 whitespace-nowrap min-w-[600px]">
+                  <thead class="text-xs text-gray-700 dark:text-gray-200 uppercase bg-gray-100 dark:bg-slate-700">
+                    <tr><th class="p-3">NIS</th><th class="p-3">Nama</th><th class="p-3">Kelas</th><th class="p-3">Item Digratiskan</th><th class="p-3 text-right">Aksi</th></tr>
+                  </thead>
+                  <tbody id="tblBiayaGratis"><tr><td colspan="5" class="p-3 text-center text-gray-400 italic">Belum ada siswa dengan biaya digratiskan.</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Tab: Transaksi SPP -->
@@ -1533,6 +1575,23 @@
       return !!(s && isSiswaKhususKategori(s) && (s.KategoriKhusus || '').toString().trim() === 'Yatim');
     }
 
+    // ===================================================================
+    // FITUR BARU: Kategori Yatim - Biaya Lainnya Digratiskan per Item/Siswa
+    // Memungkinkan admin membebaskan siswa tertentu (mis. Yatim) dari satu
+    // atau beberapa item Biaya Lainnya (boleh 2, 3, 4, atau lebih), TANPA
+    // mengubah data Biaya Lainnya itu sendiri (tetap normal untuk siswa lain
+    // di kelas yang sama). ID item yang digratiskan disimpan pada field
+    // BiayaGratisIds milik siswa (dipisah koma), mengikuti pola field
+    // Kelas Berlaku yang sudah ada di form Biaya Lainnya.
+    // ===================================================================
+    function getBiayaGratisIds(s) {
+      if (!s || !s.BiayaGratisIds) return [];
+      return s.BiayaGratisIds.toString().split(',').map(x => x.trim()).filter(Boolean);
+    }
+    function isBiayaLainGratisUntukSiswa(biayaId, s) {
+      return getBiayaGratisIds(s).map(String).includes(String(biayaId));
+    }
+
     // Filter States
     let filterNisSpp = '';
     let filterNisTxLain = '';
@@ -1949,6 +2008,10 @@
       // TAMBAHAN: Dropdown Kelas untuk fitur Siswa Khusus & render tabelnya
       populateSkKelasOptions(uniqueKelas);
       renderTblSiswaKhusus();
+
+      // TAMBAHAN: Dropdown Kelas untuk fitur Kategori Yatim - Biaya Lainnya Digratiskan
+      populateYmKelasOptions(uniqueKelas);
+      renderTblBiayaGratis();
     }
 
     // ==== FITUR BARU: Siswa Khusus (Yatim/Piatu/Dhuafa/Saudara Kandung) ====
@@ -2055,12 +2118,105 @@
 
     function updateBiayaLainDropdown(filterKelas, filterNis) {
       const sel = document.getElementById('txlBiaya'); sel.innerHTML = '<option value="">-- Pilih --</option>';
+      const sObj = filterNis ? appData.Data.find(x => x.NIS == filterNis) : null;
       appData.BiayaLain.forEach(b => {
         let match = false;
         if (b.NIS && b.NIS.toString().trim() !== "") { if (b.NIS.toString() === filterNis.toString()) match = true; } 
         else { if (isKelasMatch(b.Kelas, filterKelas)) match = true; }
+        // Kategori Yatim: sembunyikan item yang sudah digratiskan untuk siswa ini dari form pembayaran
+        if (match && sObj && isBiayaLainGratisUntukSiswa(b.ID, sObj)) match = false;
         if(match) sel.innerHTML += `<option value="${b.NamaBiaya}" data-nominal="${b.Nominal}">${b.NamaBiaya} - Rp ${b.Nominal}</option>`;
       });
+    }
+
+    // ==== FITUR BARU: Kategori Yatim - Biaya Lainnya Digratiskan per Siswa ====
+    function populateYmKelasOptions(uniqueKelasList) {
+      const sel = document.getElementById('ymKelas'); if (!sel) return;
+      const prevVal = sel.value;
+      const uniqueKelas = uniqueKelasList || [...new Set(appData.Kelas.map(k => k.Kelas))];
+      sel.innerHTML = '<option value="">-- Pilih Kelas --</option>';
+      uniqueKelas.forEach(k => { sel.innerHTML += `<option value="${k}">${k}</option>`; });
+      if (uniqueKelas.includes(prevVal)) { sel.value = prevVal; onYmKelasChange(); }
+    }
+
+    function onYmKelasChange() {
+      const kelas = document.getElementById('ymKelas').value;
+      const sel = document.getElementById('ymSiswaSelect');
+      sel.innerHTML = '';
+      if (!kelas) { sel.innerHTML = '<option value="">-- Pilih Kelas Dahulu --</option>'; resetYmForm(); return; }
+      const siswaKelas = appData.Data.filter(s => s.Kelas == kelas);
+      if (!siswaKelas.length) { sel.innerHTML = '<option value="">Tidak ada siswa di kelas ini</option>'; resetYmForm(); return; }
+      sel.innerHTML = '<option value="">-- Pilih Siswa --</option>' + siswaKelas.map(s => `<option value="${s.NIS}">${s.NIS} - ${s.Nama}</option>`).join('');
+      resetYmForm();
+    }
+
+    function onYmSiswaChange() {
+      const nis = document.getElementById('ymSiswaSelect').value;
+      const kelas = document.getElementById('ymKelas').value;
+      const wrap = document.getElementById('ymBiayaContainer');
+      if (!nis) { wrap.innerHTML = '<p class="text-xs text-gray-400 italic col-span-2">Pilih kelas &amp; siswa terlebih dahulu.</p>'; return; }
+      const s = appData.Data.find(x => x.NIS == nis);
+      const gratisIds = getBiayaGratisIds(s).map(String);
+      const list = appData.BiayaLain.filter(b => { if (b.NIS && b.NIS.toString().trim() !== "") { return b.NIS.toString() === nis.toString(); } return isKelasMatch(b.Kelas, kelas); });
+      if (!list.length) { wrap.innerHTML = '<p class="text-xs text-gray-400 italic col-span-2">Tidak ada item Biaya Lainnya untuk kelas/siswa ini.</p>'; return; }
+      wrap.innerHTML = list.map(b => `
+        <label class="flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+          <input type="checkbox" value="${b.ID}" class="rounded text-rose-600 focus:ring-rose-500 cb-biaya-gratis" ${gratisIds.includes(String(b.ID)) ? 'checked' : ''}>
+          <span>${b.NamaBiaya} <span class="text-gray-400">(Rp ${Number(b.Nominal || 0).toLocaleString('id-ID')})</span></span>
+        </label>
+      `).join('');
+    }
+
+    function resetYmForm() {
+      const wrap = document.getElementById('ymBiayaContainer');
+      if (wrap) wrap.innerHTML = '<p class="text-xs text-gray-400 italic col-span-2">Pilih kelas &amp; siswa terlebih dahulu.</p>';
+    }
+
+    function submitBiayaGratis() {
+      const nis = document.getElementById('ymSiswaSelect').value;
+      if (!nis) return Swal.fire('Error', 'Pilih kelas dan siswa terlebih dahulu', 'error');
+      const checked = Array.from(document.querySelectorAll('.cb-biaya-gratis:checked')).map(cb => cb.value);
+      const s = appData.Data.find(x => x.NIS == nis); if (!s) return Swal.fire('Error', 'Data siswa tidak ditemukan', 'error');
+      const record = { NIS: s.NIS, Nama: s.Nama, Alamat: s.Alamat, OrangTua: s.OrangTua, WA: s.WA, Kelas: s.Kelas, Status: s.Status, JenisBeasiswa: s.JenisBeasiswa, NominalBeasiswa: s.NominalBeasiswa, Password: '', KategoriKhusus: s.KategoriKhusus || 'Tidak Ada', NominalSppKhusus: s.NominalSppKhusus || 0, BiayaGratisIds: checked.join(', ') };
+      processSaveOrUpdate('Data', 'NIS', nis, record, null, 'btnSubmitBiayaGratis', '<i class="fas fa-save mr-2"></i>Simpan Biaya Gratis', null, true);
+    }
+
+    function hapusBiayaGratisItem(nis, biayaId) {
+      const s = appData.Data.find(x => x.NIS == nis); if (!s) return;
+      const remaining = getBiayaGratisIds(s).filter(id => String(id) !== String(biayaId));
+      const record = { NIS: s.NIS, Nama: s.Nama, Alamat: s.Alamat, OrangTua: s.OrangTua, WA: s.WA, Kelas: s.Kelas, Status: s.Status, JenisBeasiswa: s.JenisBeasiswa, NominalBeasiswa: s.NominalBeasiswa, Password: '', KategoriKhusus: s.KategoriKhusus || 'Tidak Ada', NominalSppKhusus: s.NominalSppKhusus || 0, BiayaGratisIds: remaining.join(', ') };
+      processSaveOrUpdate('Data', 'NIS', nis, record, null, null, null, null, true);
+    }
+
+    function hapusSemuaBiayaGratis(nis) {
+      Swal.fire({ title: 'Hapus Semua Biaya Gratis?', text: 'Semua item Biaya Lainnya yang digratiskan untuk siswa ini akan dihapus dan tagihan normal akan berlaku kembali.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya, Hapus!', confirmButtonColor: '#d33'
+      }).then(result => {
+        if (!result.isConfirmed) return;
+        const s = appData.Data.find(x => x.NIS == nis); if (!s) return;
+        const record = { NIS: s.NIS, Nama: s.Nama, Alamat: s.Alamat, OrangTua: s.OrangTua, WA: s.WA, Kelas: s.Kelas, Status: s.Status, JenisBeasiswa: s.JenisBeasiswa, NominalBeasiswa: s.NominalBeasiswa, Password: '', KategoriKhusus: s.KategoriKhusus || 'Tidak Ada', NominalSppKhusus: s.NominalSppKhusus || 0, BiayaGratisIds: '' };
+        processSaveOrUpdate('Data', 'NIS', nis, record, null, null, null, null, true);
+      });
+    }
+
+    function renderTblBiayaGratis() {
+      const tb = document.getElementById('tblBiayaGratis'); if (!tb) return;
+      const list = appData.Data.filter(s => getBiayaGratisIds(s).length > 0);
+      if (!list.length) { tb.innerHTML = '<tr><td colspan="5" class="p-3 text-center text-gray-400 italic">Belum ada siswa dengan biaya digratiskan.</td></tr>'; return; }
+      tb.innerHTML = list.map(s => {
+        const ids = getBiayaGratisIds(s);
+        const badges = ids.map(id => {
+          const b = appData.BiayaLain.find(x => String(x.ID) === String(id));
+          const nama = b ? b.NamaBiaya : id;
+          return `<span class="inline-flex items-center gap-1 text-xs font-bold text-rose-600 bg-rose-100 dark:bg-rose-900/30 px-2 py-1 rounded-full mr-1 mb-1">${nama}<button onclick="hapusBiayaGratisItem('${s.NIS}','${id}')" title="Hapus item ini" class="hover:text-red-800"><i class="fas fa-times-circle"></i></button></span>`;
+        }).join('');
+        return `<tr class="border-b dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600">
+          <td class="p-3">${s.NIS}</td>
+          <td class="p-3">${s.Nama}</td>
+          <td class="p-3">${s.Kelas}</td>
+          <td class="p-3">${badges}</td>
+          <td class="p-3 text-right"><button onclick="hapusSemuaBiayaGratis('${s.NIS}')" class="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-300 dark:border-red-700 px-3 py-1 rounded-lg text-xs hover:bg-red-200 dark:hover:bg-red-800/50 transition font-semibold"><i class="fas fa-trash-alt mr-1"></i>Hapus Semua</button></td>
+        </tr>`;
+      }).join('');
     }
 
     function getSiswaFromSearch(str) { if (!str) return null; const nis = str.split(' - ')[0]; return appData.Data.find(s => s.NIS == nis); }
@@ -2637,7 +2793,13 @@
     }
 
     function getApplicableBiayaWithSisa(nis, kelas) {
-      const list = appData.BiayaLain.filter(b => { if (b.NIS && b.NIS.toString().trim() !== "") { return b.NIS.toString() === nis.toString(); } return isKelasMatch(b.Kelas, kelas); });
+      const sObj = appData.Data.find(x => x.NIS == nis);
+      const list = appData.BiayaLain.filter(b => {
+        let match = (b.NIS && b.NIS.toString().trim() !== "") ? b.NIS.toString() === nis.toString() : isKelasMatch(b.Kelas, kelas);
+        // Kategori Yatim: sembunyikan item yang sudah digratiskan untuk siswa ini dari form pembayaran
+        if (match && sObj && isBiayaLainGratisUntukSiswa(b.ID, sObj)) match = false;
+        return match;
+      });
       return list.map(b => {
         const namaBiayaBase = (b.NamaBiaya || '').toLowerCase();
         const txBiaya = appData.Transaksi.filter(t => String(t.NIS) === String(nis) && t.Jenis !== 'SPP' && t.Jenis !== 'Pengeluaran' && t.Jenis !== 'Pemasukan' && (t.Detail || '').toLowerCase().includes(namaBiayaBase));
@@ -3089,6 +3251,8 @@
             if (filters.kategori === 'Lainnya' || filters.kategori === 'Semua') {
                 let applicableBiaya = appData.BiayaLain.filter(b => { 
                     if (b.TahunPelajaran && b.TahunPelajaran !== filters.tahunAjaran) return false;
+                    // Kategori Yatim: item yang digratiskan untuk siswa ini tidak dianggap tunggakan
+                    if (isBiayaLainGratisUntukSiswa(b.ID, s)) return false;
                     if (b.NIS && b.NIS.toString().trim() !== "") return b.NIS.toString() === s.NIS.toString(); 
                     return isKelasMatch(b.Kelas, s.Kelas); 
                 });
@@ -3231,6 +3395,8 @@
 
             // 2. Hitung Biaya Lainnya (Masing-masing baris)
             let applicableBiaya = appData.BiayaLain.filter(b => { 
+                // Kategori Yatim: item yang digratiskan untuk siswa ini tidak ditagihkan
+                if (isBiayaLainGratisUntukSiswa(b.ID, s)) return false;
                 if (b.NIS && b.NIS.toString().trim() !== "") return b.NIS.toString() === s.NIS.toString(); 
                 return isKelasMatch(b.Kelas, s.Kelas); 
             });
@@ -3446,7 +3612,7 @@
       html += `</tr></tbody></table></div></div>`;
 
       html += `<div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 p-6 mb-8"><h4 class="font-extrabold text-xl mb-4 text-indigo-800 dark:text-indigo-400 flex items-center"><i class="fas fa-clipboard-list mr-2"></i>Rekap Biaya Lainnya</h4><div class="overflow-x-auto border border-gray-200 dark:border-slate-600 rounded-xl"><table class="w-full text-sm text-left whitespace-nowrap text-gray-700 dark:text-gray-300"><thead class="bg-slate-100 dark:bg-slate-700"><tr><th class="p-3 font-bold">Nama Biaya</th><th class="p-3 text-right font-bold">Tagihan</th><th class="p-3 text-right font-bold">Telah Dibayar</th><th class="p-3 text-right font-bold">Sisa</th><th class="p-3 text-center font-bold">Status</th></tr></thead><tbody>`;
-      let applicableBiaya = appData.BiayaLain.filter(b => { if (b.NIS && b.NIS.toString().trim() !== "") { return b.NIS.toString() === s.NIS.toString(); } return isKelasMatch(b.Kelas, s.Kelas); });
+      let applicableBiaya = appData.BiayaLain.filter(b => { if (isBiayaLainGratisUntukSiswa(b.ID, s)) return false; if (b.NIS && b.NIS.toString().trim() !== "") { return b.NIS.toString() === s.NIS.toString(); } return isKelasMatch(b.Kelas, s.Kelas); });
       applicableBiaya.forEach(b => {
           let namaBiayaBase = (b.NamaBiaya || '').toLowerCase(); let txBiaya = txList.filter(t => { if (t.Jenis === 'SPP') return false; let detailTx = (t.Detail || '').toLowerCase(); return detailTx.includes(namaBiayaBase); });
           let totalDibayar = txBiaya.reduce((sum, t) => sum + Number(t.Dibayar), 0); let tagihan = Number(b.Nominal) || 0; let sisa = Math.max(0, tagihan - totalDibayar);
