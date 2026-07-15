@@ -889,6 +889,7 @@
               <label class="block text-sm font-bold text-blue-900 dark:text-blue-300 mb-2">Cari Siswa (NIS / Nama)</label>
               <div class="flex flex-col sm:flex-row gap-2 mb-4">
                 <input list="siswaList" id="sppSearch" class="w-full border dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ketik nama/nis...">
+                <button type="button" onclick="voiceInput(this,'sppSearch','text')" title="Cari siswa dengan suara" class="bg-blue-600 text-white px-4 py-3 rounded-lg text-sm hover:bg-blue-700 transition font-semibold whitespace-nowrap shrink-0"><i class="fas fa-microphone"></i></button>
                 <button onclick="resetFilterSPP()" class="bg-white dark:bg-slate-700 border border-blue-300 dark:border-blue-700 px-4 py-3 rounded-lg text-sm dark:text-white hover:bg-blue-100 dark:hover:bg-blue-800 transition font-semibold whitespace-nowrap"><i class="fas fa-sync-alt mr-1"></i>Reset Form</button>
               </div>
               <datalist id="siswaList"></datalist>
@@ -937,6 +938,7 @@
 
               <div class="flex items-center justify-between mb-1">
                 <label class="block text-sm font-bold text-blue-700 dark:text-blue-400">Jumlah Dibayar (Bisa Diangsur)</label>
+                <button type="button" onclick="voiceInput(this,'sppBayar','nominal')" title="Ucapkan nominal, cth: lima puluh ribu" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition text-sm px-2 py-1 rounded-lg border border-blue-200 dark:border-blue-700"><i class="fas fa-microphone mr-1"></i>Ucapkan</button>
               </div>
               <input type="number" id="sppBayar" class="w-full border-2 border-blue-200 dark:border-blue-600 bg-white dark:bg-slate-700 dark:text-white p-2.5 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 outline-none text-lg font-bold" required>
 
@@ -2607,6 +2609,84 @@
             showCancelButton: true, confirmButtonText: 'Simpan Perubahan', confirmButtonColor: '#3b82f6', preConfirm: () => { return { Tanggal: document.getElementById('etxTgl').value, Detail: document.getElementById('etxDetail').value, Tagihan: document.getElementById('etxTagihan').value, Dibayar: document.getElementById('etxDibayar').value, Sisa: document.getElementById('etxSisa').value } }
         }).then((res) => { if(res.isConfirmed) { const record = {...tx, ...res.value}; processSaveOrUpdate('Transaksi', 'ID', tx.ID, record, null, null, null, null, true); } });
     }
+
+    // ================= VOICE INPUT (Percobaan: Menu SPP) =================
+    // Mengubah kata angka Bahasa Indonesia (mis: "lima puluh ribu") menjadi angka (50000)
+    function parseAngkaIndonesia(teks) {
+      teks = String(teks).toLowerCase().replace(/rupiah|rp\.?|,-|\bkurang lebih\b|\bsekitar\b/g, ' ').trim();
+      // Jika ucapan sudah berupa digit murni (mis: "50000" atau "50.000"), langsung pakai
+      const hanyaDigit = teks.replace(/[^0-9]/g, '');
+      const tanpaAngkaKata = teks.replace(/nol|kosong|satu|se|dua|tiga|empat|lima|enam|tujuh|delapan|sembilan|sepuluh|sebelas|belas|puluh|ratus|ribu|juta|miliar|milyar|triliun/gi, '').trim();
+      if (hanyaDigit && tanpaAngkaKata.replace(/[\s.,]/g, '') === '') {
+        return parseInt(hanyaDigit, 10) || 0;
+      }
+
+      const satuan = { 'nol':0,'kosong':0,'satu':1,'dua':2,'tiga':3,'empat':4,'lima':5,'enam':6,'tujuh':7,'delapan':8,'sembilan':9 };
+      const kata = teks.split(/\s+/).filter(Boolean);
+      let total = 0, current = 0;
+
+      kata.forEach(w => {
+        if (/^[0-9]+$/.test(w)) { current += parseInt(w, 10); return; }
+        if (w === 'seribu') { total += (current || 1) * 1000; current = 0; return; }
+        if (w === 'sejuta') { total += (current || 1) * 1000000; current = 0; return; }
+        if (w === 'semiliar' || w === 'semilyar') { total += (current || 1) * 1e9; current = 0; return; }
+        if (w === 'seratus') { current += 100; return; }
+        if (w === 'sepuluh') { current += 10; return; }
+        if (w === 'sebelas') { current += 11; return; }
+        if (satuan.hasOwnProperty(w)) { current += satuan[w]; return; }
+        if (w === 'belas') { current += 10; return; }
+        if (w === 'puluh') { current = (current || 1) * 10; return; }
+        if (w === 'ratus') { current = (current || 1) * 100; return; }
+        if (w === 'ribu') { total += (current || 1) * 1000; current = 0; return; }
+        if (w === 'juta') { total += (current || 1) * 1000000; current = 0; return; }
+        if (w === 'miliar' || w === 'milyar') { total += (current || 1) * 1e9; current = 0; return; }
+        if (w === 'triliun') { total += (current || 1) * 1e12; current = 0; return; }
+      });
+      total += current;
+      return total;
+    }
+
+    function voiceInput(btnEl, targetId, mode) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        return Swal.fire('Tidak Didukung', 'Browser ini tidak mendukung input suara. Gunakan Google Chrome/Edge versi terbaru, dan pastikan halaman diakses lewat HTTPS.', 'warning');
+      }
+      const target = document.getElementById(targetId);
+      if (!target) return;
+
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'id-ID';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      const originalIcon = btnEl ? btnEl.innerHTML : '';
+      if (btnEl) { btnEl.innerHTML = '<i class="fas fa-microphone-alt animate-pulse"></i>'; btnEl.disabled = true; }
+
+      recognition.onresult = function(e) {
+        const transcript = e.results[0][0].transcript.trim();
+        if (mode === 'nominal') {
+          target.value = parseAngkaIndonesia(transcript);
+        } else {
+          target.value = transcript;
+        }
+        target.dispatchEvent(new Event('input', { bubbles: true }));
+        target.dispatchEvent(new Event('change', { bubbles: true }));
+      };
+      recognition.onerror = function(e) {
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+          Swal.fire('Izin Ditolak', 'Aktifkan izin mikrofon untuk situs ini di pengaturan browser.', 'error');
+        } else if (e.error === 'no-speech') {
+          Swal.fire('Tidak Terdengar', 'Tidak ada suara terdeteksi. Coba lagi.', 'info');
+        } else {
+          Swal.fire('Gagal', 'Input suara gagal: ' + e.error, 'error');
+        }
+      };
+      recognition.onend = function() {
+        if (btnEl) { btnEl.innerHTML = originalIcon; btnEl.disabled = false; }
+      };
+      recognition.start();
+    }
+    // ================= END VOICE INPUT =================
 
     function resetFilterSPP() { 
       filterNisSpp = ''; document.getElementById('sppSearch').value = ''; document.getElementById('sppStudentInfo').classList.add('hidden-view'); document.getElementById('sppFormArea').classList.add('hidden-view');
