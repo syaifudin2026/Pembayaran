@@ -70,6 +70,9 @@
     #printReportArea table { width: 100%; border-collapse: collapse; font-size: 11px; }
     #printReportArea th, #printReportArea td { border: 1px solid #333; padding: 4px; }
     #printReportArea th { background-color: #f3f4f6 !important; -webkit-print-color-adjust: exact; }
+
+    /* Cetak Laporan Buku Kas: kertas A4, margin kiri-kanan-atas-bawah 1 inch */
+    #print-section.print-report-a4 { width: 210mm; padding: 1in; box-sizing: border-box; }
     
     .thermal-no-border { border: none !important; }
     .thermal-dashed-top { border-top: 1px dashed black !important; }
@@ -1439,7 +1442,7 @@
           </tr>
         </thead>
         <tbody id="prTxTbody"></tbody>
-        <tfoot>
+        <tbody>
           <tr>
             <th colspan="4" class="border border-black p-1 text-right">Total Pemasukan</th>
             <th id="prTxTotalMasuk" colspan="2" class="border border-black p-1 text-right font-bold text-green-700"></th>
@@ -1452,7 +1455,7 @@
             <th colspan="4" class="border border-black p-1 text-right font-extrabold">SALDO BERSIH (Pemasukan - Pengeluaran)</th>
             <th id="prTxSaldo" colspan="2" class="border border-black p-1 text-right font-extrabold text-blue-700"></th>
           </tr>
-        </tfoot>
+        </tbody>
       </table>
       <div class="flex justify-between mt-6 flex-print-sig">
         <div class="text-center w-1/3"></div>
@@ -3238,10 +3241,12 @@
         document.getElementById('prTxPetugasReport').innerText = currentUser || '-';
 
         document.getElementById('printReportAreaTx').classList.remove('hidden-view');
+        document.getElementById('print-section').classList.add('print-report-a4');
         document.getElementById('print-section').classList.remove('hidden-view');
         window.print();
 
         document.getElementById('print-section').classList.add('hidden-view');
+        document.getElementById('print-section').classList.remove('print-report-a4');
         document.getElementById('printReportAreaTx').classList.add('hidden-view');
     }
 
@@ -3539,8 +3544,13 @@
                         <div class="mb-4 text-sm bg-white text-black">
                             <p>Kepada Yth.</p>
                             <p>Bapak/Ibu Orang Tua / Wali Murid dari :</p>
-                            <table class="mt-2 ml-4 mb-2">
-                                <tr><td class="w-24"> <b>${s.Nama}</b></td><td> - ( </td><td> ${s.Kelas}</td><td> ) </td></tr>
+                            <table class="mt-2 ml-4 mb-2" style="border-collapse:collapse; border-spacing:0;">
+                                <tr>
+                                    <td class="p-0 align-top whitespace-nowrap"><b>${s.Nama}</b></td>
+                                    <td class="p-0 align-top">&nbsp;-&nbsp;(&nbsp;</td>
+                                    <td class="p-0 align-top whitespace-nowrap">${s.Kelas}</td>
+                                    <td class="p-0 align-top">&nbsp;)</td>
+                                </tr>
                             </table>
                             <p>Di Tempat</p>
                         </div>
