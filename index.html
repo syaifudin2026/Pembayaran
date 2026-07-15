@@ -3477,10 +3477,10 @@
                     let teksBulan = bulanNunggak.length > 3 ? `${bulanNunggak[0]} s/d ${bulanNunggak[bulanNunggak.length-1]}` : bulanNunggak.join(', ');
                     barisTabel += `
                         <tr>
-                            <td class="border border-black p-2">Tunggakan SPP (${teksBulan})</td>
-                            <td class="border border-black p-2 text-center">${sppSemesterInfo}</td>
-                            <td class="border border-black p-2 text-center">${sppTahunInfo}</td>
-                            <td class="border border-black p-2 text-right">Rp ${tunggakanSppAmount.toLocaleString('id-ID')}</td>
+                            <td class="border border-black" style="padding:1px 2px;">Tunggakan SPP (${teksBulan})</td>
+                            <td class="border border-black text-center" style="padding:1px 2px;">${sppSemesterInfo}</td>
+                            <td class="border border-black text-center" style="padding:1px 2px;">${sppTahunInfo}</td>
+                            <td class="border border-black text-right" style="padding:1px 2px;">Rp ${tunggakanSppAmount.toLocaleString('id-ID')}</td>
                         </tr>
                     `;
                 }
@@ -3508,10 +3508,10 @@
                     let blTahunInfo = settingsMap['TahunAjaran'] || '-';
                     barisTabel += `
                         <tr>
-                            <td class="border border-black p-2">${b.NamaBiaya}</td>
-                            <td class="border border-black p-2 text-center">${blSemesterInfo}</td>
-                            <td class="border border-black p-2 text-center">${blTahunInfo}</td>
-                            <td class="border border-black p-2 text-right">Rp ${sisa.toLocaleString('id-ID')}</td>
+                            <td class="border border-black" style="padding:1px 2px;">${b.NamaBiaya}</td>
+                            <td class="border border-black text-center" style="padding:1px 2px;">${blSemesterInfo}</td>
+                            <td class="border border-black text-center" style="padding:1px 2px;">${blTahunInfo}</td>
+                            <td class="border border-black text-right" style="padding:1px 2px;">Rp ${sisa.toLocaleString('id-ID')}</td>
                         </tr>
                     `;
                 }
@@ -3560,13 +3560,13 @@
                             <p>Dengan hormat, semoga Bapak/Ibu sehat. Berdasarkan catatan administrasi sekolah, ananda tersebut masih memiliki kewajiban administrasi yang belum diselesaikan sebagai berikut: :</p>
                         </div>
 
-                        <table class="w-full text-sm border-collapse border border-black mb-6 bg-white text-black">
+                        <table class="w-full text-sm border-collapse border border-black mb-6 bg-white text-black" style="border-spacing:0;">
                             <thead>
                                 <tr class="bg-gray-100">
-                                    <th class="border border-black p-2 text-left">Rincian Tagihan</th>
-                                    <th class="border border-black p-2 text-center">Semester</th>
-                                    <th class="border border-black p-2 text-center">Tahun</th>
-                                    <th class="border border-black p-2 text-right">Nominal</th>
+                                    <th class="border border-black text-left" style="padding:1px 2px;">Rincian Tagihan</th>
+                                    <th class="border border-black text-center" style="padding:1px 2px;">Semester</th>
+                                    <th class="border border-black text-center" style="padding:1px 2px;">Tahun</th>
+                                    <th class="border border-black text-right" style="padding:1px 2px;">Nominal</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -3574,8 +3574,8 @@
                             </tbody>
                             <tfoot>
                                 <tr class="bg-gray-50 font-bold">
-                                    <td class="border border-black p-2 text-right" colspan="3">Total Tunggakan</td>
-                                    <td class="border border-black p-2 text-right text-red-700">Rp ${totalTunggakan.toLocaleString('id-ID')}</td>
+                                    <td class="border border-black text-right" colspan="3" style="padding:1px 2px;">Total Tunggakan</td>
+                                    <td class="border border-black text-right text-red-700" style="padding:1px 2px;">Rp ${totalTunggakan.toLocaleString('id-ID')}</td>
                                 </tr>
                             </tfoot>
                         </table>
