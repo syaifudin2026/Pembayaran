@@ -585,6 +585,14 @@
             <div><label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Kelas</label><input type="text" name="kelas" list="listKelas" required class="w-full border dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"></div>
             <datalist id="listKelas"></datalist>
             <div>
+              <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Jenis Kelamin</label>
+              <select name="jenisKelamin" required class="w-full border dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                <option value="">-- Pilih --</option>
+                <option value="L">Laki-laki (L)</option>
+                <option value="P">Perempuan (P)</option>
+              </select>
+            </div>
+            <div>
               <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Status Siswa</label>
               <select name="status" class="w-full border dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
                 <option>Aktif</option><option>Lulus</option><option>Pindah</option><option>Keluar</option>
@@ -630,7 +638,7 @@
             <div class="overflow-x-auto border-x border-b dark:border-slate-700 shadow-sm rounded-b-lg">
               <table class="w-full text-sm text-left text-gray-600 dark:text-gray-300 whitespace-nowrap min-w-[600px]">
                 <thead class="text-xs text-gray-700 dark:text-gray-200 uppercase bg-gray-100 dark:bg-slate-700">
-                  <tr><th class="p-3">NIS</th><th class="p-3">Nama</th><th class="p-3">Kelas</th><th class="p-3">Password</th><th class="p-3 text-right">Aksi</th></tr>
+                  <tr><th class="p-3">NIS</th><th class="p-3">Nama</th><th class="p-3">Kelas</th><th class="p-3 text-center">L/P</th><th class="p-3">Password</th><th class="p-3 text-right">Aksi</th></tr>
                 </thead>
                 <tbody id="tblSiswa"></tbody>
               </table>
@@ -765,8 +773,13 @@
               </select>
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Tahun Pelajaran (Opsional)</label>
-              <input type="text" name="tahunPelajaran" id="bl_tahun" placeholder="Cth: 2024/2025" class="w-full border dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+              <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Berlaku Untuk</label>
+              <select name="jenisKelamin" id="bl_kelamin" class="w-full border dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                <option value="Semua">Semua (Laki-laki & Perempuan)</option>
+                <option value="Laki-laki">Khusus Laki-laki</option>
+                <option value="Perempuan">Khusus Perempuan</option>
+              </select>
+              <p class="text-xs text-gray-500 mt-1">*Tahun Pelajaran otomatis mengikuti Pengaturan (<span id="bl_tahunAktifLabel">-</span>).</p>
             </div>
 
             <!-- MODIFIKASI: Kelas Berlaku Multi-Select (Checkbox) -->
@@ -922,7 +935,9 @@
               <label class="block text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Sisa Tagihan (Setelah Beasiswa/Cicilan)</label>
               <input type="number" id="sppTagihan" class="w-full border dark:border-slate-600 p-2.5 rounded-lg mb-4 bg-gray-100 dark:bg-slate-600 dark:text-white outline-none" readonly>
 
-              <label class="block text-sm font-bold text-blue-700 dark:text-blue-400 mb-1">Jumlah Dibayar (Bisa Diangsur)</label>
+              <div class="flex items-center justify-between mb-1">
+                <label class="block text-sm font-bold text-blue-700 dark:text-blue-400">Jumlah Dibayar (Bisa Diangsur)</label>
+              </div>
               <input type="number" id="sppBayar" class="w-full border-2 border-blue-200 dark:border-blue-600 bg-white dark:bg-slate-700 dark:text-white p-2.5 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 outline-none text-lg font-bold" required>
 
               <label class="block text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Sumber Dana</label>
@@ -1544,6 +1559,17 @@
       return daftarKelasArr.includes((kelasSiswa || '').toString().trim());
     }
 
+    // TAMBAHAN: Mencocokkan Biaya Lainnya yang dibatasi Jenis Kelamin (Laki-laki/Perempuan)
+    // dengan data JenisKelamin siswa di sheet Data (isi kolomnya "L" atau "P").
+    // b.JenisKelamin kosong / "Semua" -> berlaku untuk semua siswa (default, tidak memfilter apa pun).
+    function isGenderMatch(biayaGender, siswaKodeLP) {
+      if (!biayaGender || biayaGender === 'Semua') return true;
+      const kode = (siswaKodeLP || '').toString().trim().toUpperCase();
+      if (biayaGender === 'Laki-laki') return kode === 'L';
+      if (biayaGender === 'Perempuan') return kode === 'P';
+      return true;
+    }
+
     // ===================================================================
     // FITUR BARU: Siswa Khusus (Yatim / Piatu / Dhuafa / Saudara Kandung)
     // Kategori ini membuat nominal SPP bulanan siswa tsb menjadi berbeda
@@ -1764,6 +1790,7 @@
       document.getElementById('p_web').value = settingsMap['Website'] || ''; document.getElementById('p_tahun').value = settingsMap['TahunAjaran'] || '';
       document.getElementById('p_logo').value = settingsMap['Logo'] || ''; document.getElementById('p_ukuran').value = settingsMap['UkuranNota'] || 'A4';
       if(settingsMap['NamaSekolah']) document.getElementById('navTitle').innerText = settingsMap['NamaSekolah'];
+      const blTahunLabel = document.getElementById('bl_tahunAktifLabel'); if (blTahunLabel) blTahunLabel.innerText = settingsMap['TahunAjaran'] || '-';
     }
 
     function switchView(viewId) {
@@ -2123,6 +2150,8 @@
         let match = false;
         if (b.NIS && b.NIS.toString().trim() !== "") { if (b.NIS.toString() === filterNis.toString()) match = true; } 
         else { if (isKelasMatch(b.Kelas, filterKelas)) match = true; }
+        // Filter Jenis Kelamin: sembunyikan biaya khusus Laki-laki/Perempuan jika tidak cocok dengan siswa
+        if (match && sObj && !isGenderMatch(b.JenisKelamin, sObj.JenisKelamin)) match = false;
         // Kategori Yatim: sembunyikan item yang sudah digratiskan untuk siswa ini dari form pembayaran
         if (match && sObj && isBiayaLainGratisUntukSiswa(b.ID, sObj)) match = false;
         if(match) sel.innerHTML += `<option value="${b.NamaBiaya}" data-nominal="${b.Nominal}">${b.NamaBiaya} - Rp ${b.Nominal}</option>`;
@@ -2157,7 +2186,7 @@
       if (!nis) { wrap.innerHTML = '<p class="text-xs text-gray-400 italic col-span-2">Pilih kelas &amp; siswa terlebih dahulu.</p>'; return; }
       const s = appData.Data.find(x => x.NIS == nis);
       const gratisIds = getBiayaGratisIds(s).map(String);
-      const list = appData.BiayaLain.filter(b => { if (b.NIS && b.NIS.toString().trim() !== "") { return b.NIS.toString() === nis.toString(); } return isKelasMatch(b.Kelas, kelas); });
+      const list = appData.BiayaLain.filter(b => { if (b.NIS && b.NIS.toString().trim() !== "") { return b.NIS.toString() === nis.toString(); } return isKelasMatch(b.Kelas, kelas) && isGenderMatch(b.JenisKelamin, s.JenisKelamin); });
       if (!list.length) { wrap.innerHTML = '<p class="text-xs text-gray-400 italic col-span-2">Tidak ada item Biaya Lainnya untuk kelas/siswa ini.</p>'; return; }
       wrap.innerHTML = list.map(b => `
         <label class="flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
@@ -2293,7 +2322,7 @@
       updateKasDashboard(); 
 
       renderTableData(appData.Data, 'tblSiswa', 'Data', s => `<tr class="border-b dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600">
-        <td class="p-3">${s.NIS}</td><td class="p-3">${s.Nama}</td><td class="p-3">${s.Kelas}</td><td class="p-3 text-xs">${s.Password ? '*****' : '<span class="text-red-500 italic">Kosong</span>'}</td>
+        <td class="p-3">${s.NIS}</td><td class="p-3">${s.Nama}</td><td class="p-3">${s.Kelas}</td><td class="p-3 text-center font-semibold ${s.JenisKelamin === 'P' ? 'text-pink-600 dark:text-pink-400' : (s.JenisKelamin === 'L' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400')}">${s.JenisKelamin || '-'}</td><td class="p-3 text-xs">${s.Password ? '*****' : '<span class="text-red-500 italic">Kosong</span>'}</td>
         <td class="p-3 text-right whitespace-nowrap"><button onclick="editData('Data', '${s.NIS}')" class="bg-yellow-500 text-white px-3 py-1.5 rounded-md shadow-sm text-xs mr-1 hover:bg-yellow-600 transition"><i class="fas fa-edit"></i></button><button onclick="deleteData('Data', 'NIS', '${s.NIS}')" class="bg-red-500 text-white px-3 py-1.5 rounded-md shadow-sm text-xs hover:bg-red-600 transition"><i class="fas fa-trash-alt"></i></button></td></tr>`);
 
       renderTableData(appData.Kelas, 'tblKelas', 'Kelas', k => `<tr class="border-b dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600">
@@ -2304,8 +2333,10 @@
         let khususLabel = b.NIS && b.NIS.toString().trim() !== "" ? `<span class="bg-teal-100 text-teal-800 text-xs px-2 py-1 rounded font-bold">Khusus: ${b.NIS}</span>` : `<span class="text-gray-400 italic text-xs">Umum</span>`;
         // Tampilkan kelas maksimal 30 karakter agar tidak kepanjangan
         let displayKelas = b.Kelas && b.Kelas.length > 30 ? b.Kelas.substring(0, 30) + '...' : (b.Kelas || 'Semua');
+        let genderVal = b.JenisKelamin || 'Semua';
+        let genderLabel = genderVal === 'Laki-laki' ? '<span class="text-blue-600 dark:text-blue-400 font-semibold">Laki-laki</span>' : (genderVal === 'Perempuan' ? '<span class="text-pink-600 dark:text-pink-400 font-semibold">Perempuan</span>' : '<span class="text-gray-400">Semua</span>');
         return `<tr class="border-b dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600">
-        <td class="p-3">${b.ID}</td><td class="p-3">${b.NamaBiaya} <br><span class="text-xs text-gray-400">Sem: ${b.Semester||'-'} | Thn: ${b.TahunPelajaran||'-'}</span></td><td class="p-3">Rp ${b.Nominal}</td><td class="p-3 text-xs font-semibold text-indigo-600 dark:text-indigo-400 whitespace-normal min-w-[150px]">${displayKelas}</td><td class="p-3">${khususLabel}</td>
+        <td class="p-3">${b.ID}</td><td class="p-3">${b.NamaBiaya} <br><span class="text-xs text-gray-400">Sem: ${b.Semester||'-'} | Untuk: ${genderLabel}</span></td><td class="p-3">Rp ${b.Nominal}</td><td class="p-3 text-xs font-semibold text-indigo-600 dark:text-indigo-400 whitespace-normal min-w-[150px]">${displayKelas}</td><td class="p-3">${khususLabel}</td>
         <td class="p-3 text-right whitespace-nowrap"><button onclick="editData('BiayaLain', '${b.ID}')" class="bg-yellow-500 text-white px-3 py-1.5 rounded-md shadow-sm text-xs mr-1 hover:bg-yellow-600 transition"><i class="fas fa-edit"></i></button><button onclick="deleteData('BiayaLain', 'ID', '${b.ID}')" class="bg-red-500 text-white px-3 py-1.5 rounded-md shadow-sm text-xs hover:bg-red-600 transition"><i class="fas fa-trash-alt"></i></button></td></tr>`;
       });
 
@@ -2397,7 +2428,7 @@
     function editData(type, idVal) {
       if(type === 'Data') {
         const s = appData.Data.find(x => x.NIS == idVal); const f = document.getElementById('formSiswa');
-        f.nis.value = s.NIS; f.nis.readOnly = true; f.nama.value = s.Nama; f.alamat.value = s.Alamat; f.ortu.value = s.OrangTua; f.wa.value = s.WA; f.kelas.value = s.Kelas; f.status.value = s.Status; f.jenisBeasiswa.value = s.JenisBeasiswa; f.nominalBeasiswa.value = s.NominalBeasiswa; f.password.value = ''; 
+        f.nis.value = s.NIS; f.nis.readOnly = true; f.nama.value = s.Nama; f.alamat.value = s.Alamat; f.ortu.value = s.OrangTua; f.wa.value = s.WA; f.kelas.value = s.Kelas; f.jenisKelamin.value = s.JenisKelamin || ''; f.status.value = s.Status; f.jenisBeasiswa.value = s.JenisBeasiswa; f.nominalBeasiswa.value = s.NominalBeasiswa; f.password.value = ''; 
         editModes.Data = s.NIS; document.getElementById('btnSubmitSiswa').innerHTML = '<i class="fas fa-save mr-2"></i>Update Siswa'; document.getElementById('btnCancelSiswa').classList.remove('hidden-view');
       } else if (type === 'Kelas') {
         const k = appData.Kelas.find(x => x.ID == idVal); const f = document.getElementById('formKelas');
@@ -2408,7 +2439,7 @@
         
         // Load data baru
         document.getElementById('bl_semester').value = b.Semester || 'Semua';
-        document.getElementById('bl_tahun').value = b.TahunPelajaran || '';
+        document.getElementById('bl_kelamin').value = b.JenisKelamin || 'Semua';
 
         // Centang checkbox berdasarkan data Kelas yang dipisah koma
         let kelasArray = b.Kelas ? b.Kelas.split(',').map(k => k.trim()) : [];
@@ -2439,7 +2470,7 @@
           document.querySelectorAll('.cb-kelas-biaya').forEach(cb => { cb.checked = false; cb.disabled = false; });
           document.getElementById('bl_semester').disabled = false;
           document.getElementById('bl_semester').value = 'Semua';
-          document.getElementById('bl_tahun').value = '';
+          document.getElementById('bl_kelamin').value = 'Semua';
           document.getElementById('bl_nisSiswa').value = ''; 
           document.getElementById('btnSubmitBiayaLain').innerHTML = '<i class="fas fa-save mr-2"></i>Simpan Biaya'; document.getElementById('btnCancelBiayaLain').classList.add('hidden-view'); 
       }
@@ -2464,7 +2495,7 @@
       let existingStudent = appData.Data.find(s => s.NIS == nis);
       if (!editModes.Data) { if (existingStudent) return Swal.fire('Error', 'Data telah terinput sebelumnya/ganti NIS yang lain', 'error'); } 
       else { if (!newPass && existingStudent) newPass = existingStudent.Password || ''; }
-      const record = { NIS: nis, Nama: fd.get('nama'), Alamat: fd.get('alamat'), OrangTua: fd.get('ortu'), WA: fd.get('wa'), Kelas: fd.get('kelas'), Status: fd.get('status'), JenisBeasiswa: fd.get('jenisBeasiswa'), NominalBeasiswa: fd.get('nominalBeasiswa'), Password: newPass, KategoriKhusus: existingStudent ? (existingStudent.KategoriKhusus || 'Tidak Ada') : 'Tidak Ada', NominalSppKhusus: existingStudent ? (existingStudent.NominalSppKhusus || 0) : 0 };
+      const record = { NIS: nis, Nama: fd.get('nama'), Alamat: fd.get('alamat'), OrangTua: fd.get('ortu'), WA: fd.get('wa'), Kelas: fd.get('kelas'), JenisKelamin: fd.get('jenisKelamin'), Status: fd.get('status'), JenisBeasiswa: fd.get('jenisBeasiswa'), NominalBeasiswa: fd.get('nominalBeasiswa'), Password: newPass, KategoriKhusus: existingStudent ? (existingStudent.KategoriKhusus || 'Tidak Ada') : 'Tidak Ada', NominalSppKhusus: existingStudent ? (existingStudent.NominalSppKhusus || 0) : 0 };
       processSaveOrUpdate('Data', 'NIS', editModes.Data, record, e.target, 'btnSubmitSiswa', '<i class="fas fa-save mr-2"></i>Simpan Data Siswa', 'btnCancelSiswa');
     }
 
@@ -2497,7 +2528,7 @@
           Nominal: fd.get('nominal'), 
           Kelas: kelasStr, 
           Semester: semesterVal,
-          TahunPelajaran: fd.get('tahunPelajaran'),
+          JenisKelamin: fd.get('jenisKelamin') || 'Semua',
           NIS: nisClean 
       }, e.target, 'btnSubmitBiayaLain', '<i class="fas fa-save mr-2"></i>Simpan Biaya', 'btnCancelBiayaLain'); 
     }
@@ -2796,6 +2827,8 @@
       const sObj = appData.Data.find(x => x.NIS == nis);
       const list = appData.BiayaLain.filter(b => {
         let match = (b.NIS && b.NIS.toString().trim() !== "") ? b.NIS.toString() === nis.toString() : isKelasMatch(b.Kelas, kelas);
+        // Filter Jenis Kelamin: sembunyikan biaya khusus Laki-laki/Perempuan jika tidak cocok dengan siswa
+        if (match && sObj && !isGenderMatch(b.JenisKelamin, sObj.JenisKelamin)) match = false;
         // Kategori Yatim: sembunyikan item yang sudah digratiskan untuk siswa ini dari form pembayaran
         if (match && sObj && isBiayaLainGratisUntukSiswa(b.ID, sObj)) match = false;
         return match;
@@ -3250,9 +3283,9 @@
             // HITUNG BIAYA LAIN
             if (filters.kategori === 'Lainnya' || filters.kategori === 'Semua') {
                 let applicableBiaya = appData.BiayaLain.filter(b => { 
-                    if (b.TahunPelajaran && b.TahunPelajaran !== filters.tahunAjaran) return false;
                     // Kategori Yatim: item yang digratiskan untuk siswa ini tidak dianggap tunggakan
                     if (isBiayaLainGratisUntukSiswa(b.ID, s)) return false;
+                    if (!isGenderMatch(b.JenisKelamin, s.JenisKelamin)) return false;
                     if (b.NIS && b.NIS.toString().trim() !== "") return b.NIS.toString() === s.NIS.toString(); 
                     return isKelasMatch(b.Kelas, s.Kelas); 
                 });
@@ -3397,6 +3430,7 @@
             let applicableBiaya = appData.BiayaLain.filter(b => { 
                 // Kategori Yatim: item yang digratiskan untuk siswa ini tidak ditagihkan
                 if (isBiayaLainGratisUntukSiswa(b.ID, s)) return false;
+                if (!isGenderMatch(b.JenisKelamin, s.JenisKelamin)) return false;
                 if (b.NIS && b.NIS.toString().trim() !== "") return b.NIS.toString() === s.NIS.toString(); 
                 return isKelasMatch(b.Kelas, s.Kelas); 
             });
@@ -3411,7 +3445,7 @@
                 if (sisa > 0) {
                     totalTunggakan += sisa;
                     let blSemesterInfo = (b.Semester && b.Semester.toString().trim() !== '') ? b.Semester : '-';
-                    let blTahunInfo = (b.TahunPelajaran && b.TahunPelajaran.toString().trim() !== '') ? b.TahunPelajaran : '-';
+                    let blTahunInfo = settingsMap['TahunAjaran'] || '-';
                     barisTabel += `
                         <tr>
                             <td class="border border-black p-2">${b.NamaBiaya}</td>
@@ -3612,13 +3646,13 @@
       html += `</tr></tbody></table></div></div>`;
 
       html += `<div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 p-6 mb-8"><h4 class="font-extrabold text-xl mb-4 text-indigo-800 dark:text-indigo-400 flex items-center"><i class="fas fa-clipboard-list mr-2"></i>Rekap Biaya Lainnya</h4><div class="overflow-x-auto border border-gray-200 dark:border-slate-600 rounded-xl"><table class="w-full text-sm text-left whitespace-nowrap text-gray-700 dark:text-gray-300"><thead class="bg-slate-100 dark:bg-slate-700"><tr><th class="p-3 font-bold">Nama Biaya</th><th class="p-3 text-right font-bold">Tagihan</th><th class="p-3 text-right font-bold">Telah Dibayar</th><th class="p-3 text-right font-bold">Sisa</th><th class="p-3 text-center font-bold">Status</th></tr></thead><tbody>`;
-      let applicableBiaya = appData.BiayaLain.filter(b => { if (isBiayaLainGratisUntukSiswa(b.ID, s)) return false; if (b.NIS && b.NIS.toString().trim() !== "") { return b.NIS.toString() === s.NIS.toString(); } return isKelasMatch(b.Kelas, s.Kelas); });
+      let applicableBiaya = appData.BiayaLain.filter(b => { if (isBiayaLainGratisUntukSiswa(b.ID, s)) return false; if (!isGenderMatch(b.JenisKelamin, s.JenisKelamin)) return false; if (b.NIS && b.NIS.toString().trim() !== "") { return b.NIS.toString() === s.NIS.toString(); } return isKelasMatch(b.Kelas, s.Kelas); });
       applicableBiaya.forEach(b => {
           let namaBiayaBase = (b.NamaBiaya || '').toLowerCase(); let txBiaya = txList.filter(t => { if (t.Jenis === 'SPP') return false; let detailTx = (t.Detail || '').toLowerCase(); return detailTx.includes(namaBiayaBase); });
           let totalDibayar = txBiaya.reduce((sum, t) => sum + Number(t.Dibayar), 0); let tagihan = Number(b.Nominal) || 0; let sisa = Math.max(0, tagihan - totalDibayar);
           let status = ''; if (tagihan === 0) status = '-'; else if (totalDibayar >= tagihan && tagihan > 0) status = '<span class="bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 px-2 py-1 rounded-full font-bold text-xs shadow-sm">LUNAS</span>'; else if (totalDibayar > 0) status = '<span class="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400 px-2 py-1 rounded-full font-bold text-xs shadow-sm">MENGANGSUR</span>'; else status = '<span class="bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 px-2 py-1 rounded-full font-bold text-xs shadow-sm">BELUM LUNAS</span>';
-          let semesterInfo = (b.Semester && b.Semester.toString().trim() !== '') ? b.Semester : '-'; let tahunInfo = (b.TahunPelajaran && b.TahunPelajaran.toString().trim() !== '') ? b.TahunPelajaran : '-';
-          html += `<tr class="bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 transition"><td class="p-3"><span class="font-medium">${b.NamaBiaya}</span><br><span class="text-xs text-gray-400 dark:text-gray-500">Sem: ${semesterInfo} | Thn: ${tahunInfo}</span></td><td class="p-3 text-right">Rp ${tagihan.toLocaleString('id-ID')}</td><td class="p-3 text-right font-semibold text-indigo-600 dark:text-indigo-400">Rp ${totalDibayar.toLocaleString('id-ID')}</td><td class="p-3 text-right font-semibold text-red-500">Rp ${sisa.toLocaleString('id-ID')}</td><td class="p-3 text-center">${status}</td></tr>`;
+          let semesterInfo = (b.Semester && b.Semester.toString().trim() !== '') ? b.Semester : '-'; let genderInfoNota = b.JenisKelamin && b.JenisKelamin !== 'Semua' ? b.JenisKelamin : 'Semua';
+          html += `<tr class="bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 transition"><td class="p-3"><span class="font-medium">${b.NamaBiaya}</span><br><span class="text-xs text-gray-400 dark:text-gray-500">Sem: ${semesterInfo} | Untuk: ${genderInfoNota}</span></td><td class="p-3 text-right">Rp ${tagihan.toLocaleString('id-ID')}</td><td class="p-3 text-right font-semibold text-indigo-600 dark:text-indigo-400">Rp ${totalDibayar.toLocaleString('id-ID')}</td><td class="p-3 text-right font-semibold text-red-500">Rp ${sisa.toLocaleString('id-ID')}</td><td class="p-3 text-center">${status}</td></tr>`;
       });
       html += `</tbody></table></div></div>`;
 
